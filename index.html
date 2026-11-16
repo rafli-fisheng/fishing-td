@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fishing Torque &amp; Drag</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b6177">
@@ -84,97 +84,144 @@ svg.plot .xh{stroke:var(--ink);stroke-width:1;opacity:.45;pointer-events:none}
 @media (max-width:560px){.rp{padding:16px 14px}.sign{grid-template-columns:1fr;gap:34px}}
 @page{margin:12mm}
 </style>
-<style id="css-app">
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
-  --bg:#0f1519; --surface:#171d21; --soft:#202a31; --ink:#e6edf0; --muted:#9aa8b1; --line:#2d3a43;
-  --accent:#55b7cf; --accent-ink:#06222b; --s1:#3987e5; --s2:#d95926; --s3:#199e70;}}
-:root[data-theme="dark"]{color-scheme:dark;
-  --bg:#0f1519; --surface:#171d21; --soft:#202a31; --ink:#e6edf0; --muted:#9aa8b1; --line:#2d3a43;
-  --accent:#55b7cf; --accent-ink:#06222b; --s1:#3987e5; --s2:#d95926; --s3:#199e70;}
-@media print{:root:root:root{color-scheme:light;
-  --bg:#ffffff; --surface:#ffffff; --soft:#e4eaed; --ink:#14212a; --muted:#56646e; --line:#d2d9de;
-  --accent:#0b6177; --accent-ink:#ffffff; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;}
-  body>*:not(main){display:none!important} main{padding:0!important;max-width:none!important}
-  .panel{display:none!important} #p-report{display:block!important} #p-report .bar,#p-report .hint{display:none!important}
-  .rp{border:0;padding:0;max-width:none} .scroll{overflow:visible}
-  body.ps #p-report{display:none!important} body.ps #p-simple{display:block!important} #p-simple .bar,#p-simple .hint{display:none!important}}
-.top{background:var(--ink);color:var(--bg);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.top h1{font-size:20px;letter-spacing:.04em;text-transform:uppercase}
-.top .case{font-size:13px;opacity:.8;margin-right:auto}
-button,.btn{font:inherit;font-size:13.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:4px;cursor:pointer}
-button:hover{border-color:var(--accent)} button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-button.ghost{background:transparent;color:inherit;border-color:currentColor;opacity:.85}
-button.ic{padding:3px 8px;font-size:13px;line-height:1.2}
-.tabs{display:flex;gap:0;overflow-x:auto;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
-.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:11px 14px;white-space:nowrap;color:var(--muted)}
-.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
-.tabs i.tb{font-style:normal;margin-left:6px;font-size:12px} .tabs i.tb.ok{color:var(--good)} .tabs i.tb.todo{color:var(--warn);font-size:16px;line-height:0}
-.tabs button b{font-family:var(--font-num);font-weight:500;font-size:11px;margin-right:6px;opacity:.7}
-main{max-width:1180px;margin:0 auto;padding:16px}
-.panel{display:none} .panel.on{display:grid;gap:16px}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
-.card>h2{font-size:17px;margin-bottom:10px} .card>h2 small{font-family:var(--font-body);font-weight:400;font-size:12.5px;color:var(--muted);margin-left:8px}
-.help{color:var(--muted);font-size:13px;margin:0 0 10px;max-width:70ch}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 14px}
-.fld{display:grid;gap:3px;font-size:12.5px;color:var(--muted);min-width:0}
-.fld em{font-style:normal;opacity:.8}
-input,select,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
-textarea{font-family:var(--font-num);font-size:12.5px;min-height:150px;resize:vertical}
-.tbl input,.tbl select{padding:4px 6px;font-size:13px;min-width:62px} .tbl td{padding:3px 4px;border-bottom:0} .tbl th{padding:3px 6px}
-.tbl input{min-width:80px} .tbl select{min-width:120px} .tbl input.w{min-width:190px} .tbl td.act{white-space:nowrap}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;flex-wrap:wrap}
-.seg button{border:0;border-radius:0;background:var(--surface)} .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.banner{background:var(--soft);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:4px;padding:9px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13.5px}
-.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
-.tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);padding:7px 9px;border-radius:4px;font-size:12px;line-height:1.5;max-width:240px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
-.tip b{font-family:var(--font-num)} .tip i{display:inline-block;width:12px;border-top:2.5px solid;margin-right:6px;vertical-align:middle}
-.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:4px;font-size:13.5px;z-index:30;max-width:90vw}
-details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
-.hint{font-size:12.5px;color:var(--muted)}
-.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-@media (prefers-reduced-motion:no-preference){button{transition:border-color .12s}}
-@media (max-width:600px){
-  input,select,textarea{font-size:16px}
-  .top{padding:8px 12px;gap:8px}
-  .top h1{font-size:16px;width:100%}
-  .top .case{order:9;width:100%;font-size:12px}
-  .top button{font-size:12px;padding:6px 4px;flex:1 1 0;white-space:nowrap}
-  .top select{font-size:13px;padding:5px 8px}
-  #builtin{max-width:100%!important;flex:1 1 100%}
-  main{padding:10px}
-  .card{padding:12px}
-  .tabs button{padding:10px 11px}
-  .kv{grid-template-columns:1fr 1fr}
-  .kv .val{font-size:18px}
-  .tbl input{min-width:72px}
-}
-#b-install{display:none}
+<style>
+:root{--good:#0ca30c;--warn:#e0a010;--crit:#d03b3b}
+html{-webkit-text-size-adjust:100%}
+body{background:#eef1f3;margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#14212a;font-size:15px}
+#m-app{max-width:560px;margin:0 auto;min-height:100vh;padding-bottom:calc(84px + env(safe-area-inset-bottom));background:#eef1f3}
+#m-app.m-cases{padding-bottom:24px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid #0b6177;outline-offset:2px}
+.mhead{position:sticky;top:0;z-index:10;background:#14212a;color:#fff;display:flex;align-items:center;gap:6px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px}
+.mback{width:44px;height:44px;border:0;background:transparent;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:22px}
+.mht{display:flex;flex-direction:column;flex:1;min-width:0}
+.mht b{font-family:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;font-size:22px;letter-spacing:.01em}
+.mht span{font-size:12px;color:#9aa8b1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mstep{font-size:12px;color:#8fd1e2;padding-right:6px;white-space:nowrap}
+.mhome{background:#14212a;color:#fff;padding:calc(24px + env(safe-area-inset-top)) 20px 22px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.mkick{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8fd1e2;font-weight:600}
+.mhome h1{margin:2px 0 0;font-family:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;font-size:32px;letter-spacing:.02em}
+.mghost{display:none;align-items:center;height:40px;padding:0 14px;border-radius:20px;border:1px solid #3b4952;background:transparent;color:#fff;font-size:13px;font-weight:600}
+.mbody{padding:14px 14px 20px;display:flex;flex-direction:column;gap:12px}
+.mbig{display:flex;align-items:center;justify-content:center;gap:10px;min-height:54px;border-radius:14px;border:0;background:#0b6177;color:#fff;font-size:16px;font-weight:600}
+.mbig.alt{background:#fff;color:#14212a;border:1px solid #c4ced4;min-height:50px}
+.mbtn{min-height:46px;border-radius:12px;border:1px solid #c4ced4;background:#fff;font-size:14px;font-weight:600;color:#0b6177;padding:0 12px;flex:1}
+.mbtn.sm{min-height:40px;font-size:13px}
+.mbtn.warn{color:#b0332f}
+.mbtn:disabled{opacity:.4}
+.mpair{display:flex;gap:8px;flex-wrap:wrap}
+.mpair>*{flex:1 1 140px}
+.mpair select{min-height:46px;border-radius:12px;border:1px solid #c4ced4;background:#fff;padding:0 10px;font-size:14px}
+.msec{display:flex;justify-content:space-between;align-items:baseline;padding:6px 4px 0}
+.msec h2{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#56646e}
+.msec span{font-size:12px;color:#56646e}
+.mnote{margin:0;font-size:12.5px;color:#56646e;padding:0 4px;line-height:1.45}
+.mnote.c{text-align:center}
+.mcard{background:#fff;border:1px solid #d2d9de;border-radius:16px;padding:6px 14px;display:flex;flex-direction:column}
+.mcard.flat{border:0;border-radius:0;padding:0;background:transparent}
+.mcard h3{margin:8px 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#56646e}
+.mcard-h{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0}
+.mcard-h b.acc{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;color:#0b6177}
+.micon{width:40px;height:40px;border:0;background:transparent;color:#56646e;border-radius:20px;display:flex;align-items:center;justify-content:center}
+.mrow{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:48px;border-bottom:1px solid #e8ecef;font-size:14.5px}
+.mcard .mrow:last-child{border-bottom:0}
+.mrow .ml{display:flex;flex-direction:column;min-width:0}
+.mrow .ml small{font-size:11.5px;color:#56646e}
+.mrow .mv{display:flex;align-items:baseline;gap:6px;justify-content:flex-end;flex-wrap:wrap;text-align:right}
+.mrow .mv b{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:16px}
+.mrow input,.mrow select{border:0;background:transparent;text-align:right;font-size:16px;padding:8px 0;max-width:170px;width:100%}
+.mrow input:not(.mtext){font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:600;max-width:110px}
+.mrow input::placeholder{color:#8a979f;font-weight:400;font-family:Inter,system-ui,sans-serif;font-size:14px}
+.mrow em{font-style:normal;font-size:12px;color:#56646e;min-width:30px;text-align:left}
+.mrow select{direction:rtl;font-weight:600}
+.mrow.ro{min-height:44px}
+.mlab{font-size:12.5px;color:#56646e;margin:8px 0 4px}
+textarea{width:100%;box-sizing:border-box;min-height:150px;border:1px solid #d2d9de;border-radius:10px;padding:10px;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:13px;background:#f6f8f9;margin-bottom:8px}
+.mseg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;background:#dde4e8;border-radius:12px;padding:4px;gap:4px}
+.mseg button{min-height:40px;border:0;border-radius:9px;background:transparent;font-size:14px;color:#56646e}
+.mseg button[aria-pressed="true"]{background:#fff;color:#14212a;font-weight:600;box-shadow:0 1px 2px rgba(20,33,42,.12)}
+.mchips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mchips button{min-height:46px;border-radius:12px;border:1px solid #c4ced4;background:#fff;font-size:14px;color:#3b4952}
+.mchips button[aria-pressed="true"]{border:2px solid #0b6177;background:#e3f1f4;color:#0b6177;font-weight:600}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:4px 0 10px}
+.mcell{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:#56646e;min-width:0}
+.mcell.wide{grid-column:1/-1}
+.mcell input,.mcell select{border:1px solid #d2d9de;border-radius:10px;background:#f6f8f9;padding:9px 10px;font-size:16px;min-width:0;width:100%;box-sizing:border-box;color:#14212a}
+.mcell input:disabled{opacity:.6}
+.mtri3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mtri3 .mcell{background:#fff;border:1px solid #d2d9de;border-radius:12px;padding:8px 10px}
+.mtri3 .mcell input{border:0;background:transparent;padding:2px 0;font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:600;font-size:18px}
+.mitem{background:#fff;border:1px solid #d2d9de;border-radius:14px;padding:0 12px}
+.mitem[open]{border-color:#0b6177}
+.mitem summary{list-style:none;display:flex;align-items:center;gap:10px;min-height:52px;cursor:pointer}
+.mitem summary::-webkit-details-marker{display:none}
+.mitem summary i{width:8px;align-self:stretch;margin:10px 0;border-radius:3px}
+.mi-n{flex:1;font-weight:600;font-size:14.5px;min-width:0}
+.mi-l{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:13px;color:#56646e;white-space:nowrap}
+.mitem .mpair{padding-bottom:12px}
+.mmore{background:#fff;border:1px solid #d2d9de;border-radius:14px;padding:0 14px}
+.mmore summary{min-height:50px;display:flex;align-items:center;font-weight:600;font-size:14.5px;cursor:pointer}
+.mmore[open]{padding-bottom:12px}
+.mstrip{background:#fff;border-bottom:1px solid #d2d9de;padding:10px 16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mstrip div,.mquad div,.mtrio div{display:flex;flex-direction:column}
+.mstrip span,.mquad span,.mtrio span{font-size:11px;color:#56646e}
+.mstrip b,.mquad b,.mtrio b{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:15px}
+.mquad{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;padding:8px 0 10px}
+.mpath .chart figcaption,.mpath .chart .sub{display:none}
+.mcase{display:flex;background:#fff;border:1px solid #d2d9de;border-radius:16px;overflow:hidden}
+.mcase-main{flex:1;border:0;background:transparent;text-align:left;padding:14px 4px 14px 16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.mcase-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.mcase-top b{font-family:"Barlow Condensed","Roboto Condensed","Arial Narrow",sans-serif;font-size:22px}
+.mcase-sub{font-size:13.5px;color:#3b4952}
+.mtrio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mdel{width:56px;border:0;border-left:1px solid #e8ecef;background:transparent;color:#56646e;font-size:12px;font-weight:600}
+.mbadge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.mbadge i{width:8px;height:8px;border-radius:4px}
+.mbadge.ok{color:#0b6b0b;background:#e2f4e2}.mbadge.ok i{background:#0ca30c}
+.mbadge.warn{color:#7a5200;background:#fdf1d6}.mbadge.warn i{background:#e0a010}
+.mbadge.bad{color:#9b1c1c;background:#fbe4e4}.mbadge.bad i{background:#d03b3b}
+.mstatus{display:flex;align-items:center;gap:12px;border-radius:14px;padding:12px 14px;border:1px solid}
+.mstatus>b{width:36px;height:36px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.mstatus div{display:flex;flex-direction:column}.mstatus strong{font-size:15px}.mstatus span{font-size:13px}
+.mstatus.ok{background:#e9f7e9;border-color:#a6d9a6}.mstatus.ok>b{background:#0ca30c;color:#fff}.mstatus.ok strong{color:#0b6b0b}
+.mstatus.warn{background:#fff7e6;border-color:#f0d08a}.mstatus.warn>b{background:#e0a010;color:#2b1d00}.mstatus.warn strong{color:#6b4700}
+.mstatus.bad{background:#fdecec;border-color:#efb3b3}.mstatus.bad>b{background:#d03b3b;color:#fff}.mstatus.bad strong{color:#9b1c1c}
+.mtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mtile{background:#fff;border:1px solid #d2d9de;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.mtile span{font-size:12px;color:#56646e}
+.mtile b{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-size:25px;line-height:1.15}
+.mtile b small{font-family:Inter,sans-serif;font-size:12px;font-weight:500;color:#56646e}
+.mtile em{font-style:normal;font-size:12px;color:#56646e}
+.mtile em.g{color:#0b6b0b;font-weight:600}.mtile em.w{color:#7a5200;font-weight:600}.mtile em.b{color:#9b1c1c;font-weight:600}
+.mbar{height:12px;border-radius:6px;background:#e4e9ec;overflow:hidden}.mbar i{display:block;height:100%;background:#2a78d6;border-radius:6px}
+.mtxt{font-size:13.5px;color:#3b4952;margin:8px 0;line-height:1.45}
+.mchart{padding:12px}
+.mwarn{display:flex;gap:10px;align-items:flex-start;background:#fff;border:1px solid #d2d9de;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.4}
+.mwarn i{width:10px;height:10px;border-radius:5px;margin-top:4px;flex:none}
+.mwarn.warn i{background:#e0a010}.mwarn.bad i{background:#d03b3b}.mwarn.bad{border-color:#efb3b3}
+.mpages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.mpages>div{display:flex;flex-direction:column;align-items:center;gap:6px}
+.mpages span{font-size:11.5px;color:#56646e}
+.pg{width:100%;aspect-ratio:.707;background:#fff;border:1px solid #d2d9de;border-radius:6px;box-shadow:0 2px 6px rgba(20,33,42,.08);display:flex;flex-direction:column;gap:5px;padding:0 0 6px;overflow:hidden;box-sizing:border-box}
+.pg i{display:block;margin:0 7px;height:5px;background:#e4e9ec;border-radius:2px}
+.pg.p1 i:first-child{margin:0;height:18px;background:#0b6177;border-radius:0}
+.pg.p1 i:nth-child(2){height:10px;background:#fdf1d6}
+.pg.p1 i:nth-child(3){height:24px;background:#f1f4f6}
+.pg.p2 i{height:40%;margin-top:7px;background:linear-gradient(160deg,#fff 40%,#d9e8f8 41%,#fff 70%)}
+.pg.p3 i{margin-top:5px}.pg.p3 i:first-child{background:#14212a;width:50%}
+.mnav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:560px;background:#fff;border-top:1px solid #d2d9de;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));padding:6px 4px calc(8px + env(safe-area-inset-bottom));z-index:20;box-sizing:border-box}
+.mnav button{border:0;background:transparent;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;font-size:11px;color:#56646e;min-height:52px}
+.mnav button[aria-current="page"]{color:#0b6177;font-weight:600}
+.scroll{overflow-x:auto}
+.mcard.flat figure{margin:8px 0}
+.tip{position:fixed;z-index:30;pointer-events:none;background:#14212a;color:#fff;padding:7px 9px;border-radius:4px;font-size:12px;line-height:1.5;max-width:240px}
+.tip b{font-family:"JetBrains Mono",monospace}.tip i{display:inline-block;width:12px;border-top:2.5px solid;margin-right:6px;vertical-align:middle}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#14212a;color:#fff;padding:10px 14px;border-radius:10px;font-size:13.5px;z-index:40;max-width:86vw}
 </style>
 </head>
 <body>
-<header class="top">
-  <h1>Fishing Torque &amp; Drag</h1>
-  <span class="case" id="case-name"></span>
-  <button class="ghost" id="b-install">Install app</button>
-  <button class="ghost" data-act="pdf" id="b-pdf">Download PDF</button>
-  <button class="ghost" data-act="save-case" id="b-save">Save case</button>
-  <button class="ghost" data-act="load-case" id="b-load">Load case</button>
-  <button class="ghost" data-act="new-blank" id="b-new">New case</button>
-</header>
-<nav class="tabs" role="tablist" aria-label="Sections" id="tabs"></nav>
-<main>
-  <div id="banner"></div>
-  <section class="panel" id="p-job"></section>
-  <section class="panel" id="p-path"></section>
-  <section class="panel" id="p-wellbore"></section>
-  <section class="panel" id="p-string"></section>
-  <section class="panel" id="p-operation"></section>
-  <section class="panel" id="p-results"></section>
-  <section class="panel" id="p-simple"></section>
-  <section class="panel" id="p-report"></section>
-</main>
+<div id="m-app"></div>
 <div class="tip" id="tip" hidden></div>
 <div class="toast" id="toast" role="status" hidden></div>
 <input type="file" id="file-case" accept=".json,application/json" hidden>
@@ -832,15 +879,12 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
-  var btn = document.getElementById('b-install'), ev = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__tdInstall = e; var b = document.getElementById('b-install'); if (b) b.style.display = 'inline-flex'; });
+  document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('#b-install'); if (!b || !window.__tdInstall) return; window.__tdInstall.prompt(); window.__tdInstall = null; b.style.display = 'none'; });
   var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); ev = e; if (btn) btn.style.display = 'inline-block'; });
-  if (btn) btn.addEventListener('click', function () { if (ev) { ev.prompt(); ev = null; btn.style.display = 'none'; } });
-  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
-  if (ios && !standalone) setTimeout(function () { var t = document.getElementById('toast'); if (!t) return; try { if (localStorage.getItem('tdfish.ioshint')) return; localStorage.setItem('tdfish.ioshint', '1'); } catch (e) {} t.textContent = 'To install: tap the Share button, then "Add to Home Screen".'; t.hidden = false; setTimeout(function () { t.hidden = true; }, 7000); }, 1500);
+  if (/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone) setTimeout(function () { var t = document.getElementById('toast'); if (!t) return; try { if (localStorage.getItem('tdfish.ioshint')) return; localStorage.setItem('tdfish.ioshint', '1'); } catch (e) {} t.textContent = 'To install: tap Share, then "Add to Home Screen".'; t.hidden = false; setTimeout(function () { t.hidden = true; }, 7000); }, 1500);
 })();
 </script>
-
 <script>(function () {
   'use strict';
   var TD = window.TD, KEY = 'tdfish.case.v1';
@@ -937,7 +981,7 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
   var BUILTIN = {};
   function merge(base, o) { Object.keys(o || {}).forEach(function (k) { if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) && base[k] && typeof base[k] === 'object') merge(base[k], o[k]); else base[k] = o[k]; }); return base; }
   function loadCase(o) { S = merge(baseCase(), o); if (!Array.isArray(S.secs)) S.secs = []; if (!Array.isArray(S.comps)) S.comps = []; S.comps = S.comps.map(comp); renderInputs(); calc(); }
-  function autosave() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
+  function autosave() { if (MOBILE) mAutosave(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
 
   function parseSurvey(txt) {
     var rows = [];
@@ -965,6 +1009,7 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
   }
 
   function renderInputs() {
+    if (MOBILE) { M.keepScroll = true; return mRender(); }
     $('#p-job').innerHTML = '<div class="card"><h2>Job details <small>printed on the report header</small></h2><div class="grid">' +
       fld('job.well', 'Well', '', { text: 1 }) + fld('job.field', 'Field', '', { text: 1 }) + fld('job.rig', 'Rig', '', { text: 1 }) + fld('job.client', 'Client company', '', { text: 1 }) +
       fld('job.job', 'Job description', '', { text: 1 }) + fld('job.date', 'Date', '', { text: 1, type: 'date' }) + fld('job.preparedBy', 'Prepared by', '', { text: 1 }) +
@@ -1272,6 +1317,7 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
     Object.keys(done).forEach(function (t) { var b = $('#tab-' + t); if (!b) return; var m = b.querySelector('i.tb'); if (!m) { m = document.createElement('i'); m.className = 'tb'; b.appendChild(m); } m.textContent = done[t] ? '✓' : '•'; m.className = 'tb ' + (done[t] ? 'ok' : 'todo'); m.title = done[t] ? 'Filled in' : 'Needs input'; });
   }
   function renderDynamic() {
+    if (MOBILE) return mLive();
     tabBadges();
     REG = {};
     $('#case-name').textContent = (S.job.well || 'Untitled case') + (S.job.job ? ' · ' + S.job.job : '');
@@ -1675,8 +1721,240 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
   }
   function readFile(input, cb) { var f = input.files && input.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { cb(String(r.result)); input.value = ''; }; r.readAsText(f); }
 
+  /* ---------- mobile layout (phone app) ---------- */
+  var MOBILE = !!document.getElementById('m-app'), CKEY = 'tdfish.cases.v1', M = { tab: 'cases', open: {}, del: null, store: { cur: null, list: [] } };
+  var MTABS = [['well', 'Well'], ['string', 'String'], ['op', 'Operation'], ['results', 'Results'], ['report', 'Report']];
+  var MICON = {
+    well: '<path d="M6 2v8a7 7 0 0 0 7 7h7"/><circle cx="20" cy="17" r="1.5" fill="currentColor"/>',
+    string: '<rect x="9" y="2" width="6" height="7" rx="1"/><rect x="8" y="9" width="8" height="6" rx="1"/><rect x="9" y="15" width="6" height="7" rx="1"/>',
+    op: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+    results: '<path d="M3 20h18M5 16l4-5 4 3 6-8"/>',
+    report: '<path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'
+  };
+  var TYPECOL = { dp: '#9aa8b1', hwdp: '#6c7c86', dc: '#3b4952', jar: '#0b6177', accel: '#0b6177', bumper: '#5c6c76', overshot: '#2a78d6', spear: '#2a78d6', mill: '#2a78d6', washpipe: '#4f8fd9', tool: '#5c6c76' };
+  function svgI(p, s) { return '<svg width="' + (s || 24) + '" height="' + (s || 24) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>'; }
+  function uid() { return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function mLoadStore() { try { var s = JSON.parse(localStorage.getItem(CKEY) || 'null'); if (s && Array.isArray(s.list)) M.store = s; } catch (e) { /* none */ } }
+  function mSaveStore() { try { localStorage.setItem(CKEY, JSON.stringify(M.store)); } catch (e) { /* storage unavailable */ } }
+  function mSummary() {
+    if (!R || R.error || !R.traj) return null; var st = stateOf();
+    return { depth: R.D, inc: R.bottom ? R.bottom.inc : 0, pu: R.hlPU, so: R.hlSO, tq: R.tqROB, st: st[0], stw: st[1] };
+  }
+  function mAutosave() {
+    if (M.noSave) return;
+    if (!M.store.cur) { M.store.cur = uid(); }
+    var e = M.store.list.filter(function (x) { return x.id === M.store.cur; })[0];
+    if (!e) { e = { id: M.store.cur }; M.store.list.unshift(e); }
+    e.t = Date.now(); e.c = S; e.sum = mSummary();
+    M.store.list.sort(function (a, b) { return b.t - a.t; });
+    mSaveStore();
+  }
+  function mOpenCase(c, id) { M.noSave = false; M.store.cur = id || uid(); S = merge(baseCase(), c); S.comps = (S.comps || []).map(comp); if (!S.op.mode) S.op.mode = 'latched'; calc(); }
+
+  /* small form helpers */
+  function rIn(path, label, unit, o) {
+    o = o || {}; var v = get(S, path); if (v == null) v = ''; var id = 'm-' + path.replace(/\./g, '-');
+    return '<label class="mrow" for="' + id + '"><span class="ml">' + esc(label) + (o.help ? '<small>' + esc(o.help) + '</small>' : '') + '</span><span class="mv"><input id="' + id + '" data-k="' + path + '" value="' + esc(v) + '"' + (o.text ? ' class="mtext"' : ' inputmode="decimal"') + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + (o.type ? ' type="' + o.type + '"' : '') + (o.list ? ' list="' + o.list + '"' : '') + (o.dis ? ' disabled' : '') + '>' + (unit ? '<em>' + esc(unit) + '</em>' : '') + '</span></label>';
+  }
+  function rSel(path, label, opts, o) {
+    o = o || {}; var v = get(S, path); if (v == null) v = ''; var id = 'm-' + path.replace(/\./g, '-');
+    return '<label class="mrow" for="' + id + '"><span class="ml">' + esc(label) + '</span><span class="mv"><select id="' + id + '" data-k="' + path + '"' + (o.re ? ' data-re="1"' : '') + '>' + opts.map(function (q) { return '<option value="' + esc(q[0]) + '"' + (String(v) === String(q[0]) ? ' selected' : '') + '>' + esc(q[1]) + '</option>'; }).join('') + '</select></span></label>';
+  }
+  function cIn(path, label, o) {
+    o = o || {}; var v = get(S, path); if (v == null) v = ''; var id = 'm-' + path.replace(/\./g, '-');
+    if (o.options) return '<label class="mcell' + (o.wide ? ' wide' : '') + '" for="' + id + '"><span>' + esc(label) + '</span><select id="' + id + '" data-k="' + path + '"' + (o.re ? ' data-re="1"' : '') + '>' + o.options.map(function (q) { return '<option value="' + esc(q[0]) + '"' + (String(v) === String(q[0]) ? ' selected' : '') + '>' + esc(q[1]) + '</option>'; }).join('') + '</select></label>';
+    return '<label class="mcell' + (o.wide ? ' wide' : '') + '" for="' + id + '"><span>' + esc(label) + '</span><input id="' + id + '" data-k="' + path + '" value="' + esc(v) + '"' + (o.text ? '' : ' inputmode="decimal"') + (o.ph ? ' placeholder="' + esc(o.ph) + '"' : '') + (o.list ? ' list="' + o.list + '"' : '') + (o.dis ? ' disabled' : '') + '></label>';
+  }
+  function seg(items, cur, actPrefix, label) { return '<div class="mseg" role="group" aria-label="' + esc(label) + '">' + items.map(function (q) { return '<button data-act="' + actPrefix + q[0] + '" aria-pressed="' + (cur === q[0]) + '">' + esc(q[1]) + '</button>'; }).join('') + '</div>'; }
+  function head(title, sub, back, step) {
+    return '<header class="mhead">' + (back ? '<button class="mback" data-act="m-go:' + back + '" aria-label="Back">' + svgI('<path d="M15 5l-7 7 7 7"/>', 22) + '</button>' : '') + '<div class="mht"><b>' + esc(title) + '</b><span>' + esc(sub || '') + '</span></div>' + (step ? '<span class="mstep">' + esc(step) + '</span>' : '') + '</header>';
+  }
+  function nav() {
+    return '<nav class="mnav" aria-label="Main">' + MTABS.map(function (t) { return '<button data-act="m-go:' + t[0] + '"' + (M.tab === t[0] ? ' aria-current="page"' : '') + '>' + svgI(MICON[t[0]]) + '<span>' + t[1] + '</span></button>'; }).join('') + '</nav>';
+  }
+  function caseSub() { return (S.job.well || 'Untitled well') + (S.job.job ? ' · ' + S.job.job : ''); }
+  function stBadge(st, word) { return '<span class="mbadge ' + st + '"><i></i>' + esc(word) + '</span>'; }
+
+  /* screens */
+  function scCases() {
+    var h = '<header class="mhome"><div><span class="mkick">Fishing</span><h1>Torque &amp; Drag</h1></div><button id="b-install" class="mghost">Install app</button></header><div class="mbody">';
+    h += '<button class="mbig" data-act="m-new">' + svgI('<path d="M12 5v14M5 12h14"/>', 20) + 'New case</button>';
+    h += '<div class="msec"><h2>Saved cases</h2><span>' + M.store.list.length + '</span></div>';
+    if (!M.store.list.length) h += '<p class="mnote">No saved cases yet. Start a new case or open the example.</p>';
+    M.store.list.forEach(function (e) {
+      var c = e.c || {}, j = c.job || {}, s = e.sum;
+      h += '<div class="mcase"><button class="mcase-main" data-act="m-open:' + e.id + '"><div class="mcase-top"><b>' + esc(j.well || 'Untitled well') + '</b>' + (s ? stBadge(s.st, s.st === 'ok' ? 'Safe' : s.st === 'bad' ? 'Danger' : 'Check') : '') + '</div><span class="mcase-sub">' + esc(j.job || 'No job description') + (s ? ' · ' + n0(s.depth) + ' ft MD · ' + fx(s.inc, 0) + '°' : '') + '</span>' +
+        (s ? '<div class="mtrio"><div><span>Pick-up</span><b>' + k1(s.pu) + '</b></div><div><span>Slack-off</span><b>' + k1(s.so) + '</b></div><div><span>Torque</span><b>' + n0(s.tq) + '</b></div></div>' : '') + '</button>' +
+        '<button class="mdel" data-act="m-del:' + e.id + '" aria-label="Delete ' + esc(j.well || 'case') + '">' + (M.del === e.id ? 'Delete?' : svgI('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>', 18)) + '</button></div>';
+    });
+    h += '<div class="mpair"><button class="mbtn" data-act="load-case">Open file</button><button class="mbtn" data-act="m-example">Example well</button></div>';
+    if (Object.keys(BUILTIN).length) h += '<div class="mpair">' + Object.keys(BUILTIN).map(function (k) { return '<button class="mbtn sm" data-act="m-builtin:' + k + '">' + esc(BUILTIN[k].label.replace('ESTA-6 · ', 'ESTA-6 ')) + '</button>'; }).join('') + '</div>';
+    h += '<p class="mnote c">Works offline. Cases are saved on this phone; use Save file to keep a copy.</p></div>';
+    return h;
+  }
+  function scWell() {
+    var isS = S.traj.mode === 'survey', P = S.traj.profile, t = R && R.traj, h = head('Well', caseSub(), 'cases', 'Step 1 of 3') + '<div class="mbody">';
+    h += '<section class="mcard"><h3>Job</h3>' + rIn('job.well', 'Well', '', { text: 1, ph: 'Well name' }) + rIn('job.job', 'Job', '', { text: 1, ph: 'e.g. Overshot run' }) + rIn('job.client', 'Client', '', { text: 1 }) + rIn('job.rig', 'Rig', '', { text: 1 }) + rIn('job.date', 'Date', '', { text: 1, type: 'date' }) + '</section>';
+    h += seg([['survey', 'Survey'], ['profile', 'Planned profile']], isS ? 'survey' : 'profile', 'mode:', 'Well path source');
+    h += '<section class="mcard"><div id="m-live-path">' + mPathBlock() + '</div>';
+    if (isS) h += '<label class="mlab" for="m-survey">Stations: MD (ft), inclination (deg), azimuth (deg), one per line</label><textarea id="m-survey" data-k="traj.surveyText" spellcheck="false" placeholder="0 0 0&#10;1500 0 0&#10;1600 3.0 120">' + esc(S.traj.surveyText) + '</textarea><div class="mpair"><button class="mbtn" data-act="survey-file">Import file</button></div>';
+    else h += rSel('traj.profile.type', 'Shape', [['vertical', 'Vertical'], ['j', 'Build and hold'], ['s', 'Build, hold, drop']], { re: 1 }) + rIn('traj.profile.td', 'Total depth', 'ft MD') + (P.type !== 'vertical' ? rIn('traj.profile.kop', 'Kick-off', 'ft MD') + rIn('traj.profile.bur', 'Build rate', '°/100 ft') + rIn('traj.profile.inc', 'Hold angle', 'deg') + rIn('traj.profile.azi', 'Azimuth', 'deg') : '') + (P.type === 's' ? rIn('traj.profile.dropMd', 'Start of drop', 'ft MD') + rIn('traj.profile.dor', 'Drop rate', '°/100 ft') + rIn('traj.profile.finalInc', 'Final angle', 'deg') : '');
+    h += '</section><div class="msec"><h2>Hole sections</h2><span>top down</span></div>';
+    S.secs.forEach(function (s, i) {
+      var p = 'secs.' + i + '.';
+      h += '<section class="mcard"><div class="mcard-h"><b>' + esc(s.name || 'Section ' + (i + 1)) + '</b><button class="micon" data-act="del-sec:' + i + '" aria-label="Remove section">' + svgI('<path d="M6 6l12 12M18 6L6 18"/>', 18) + '</button></div><div class="mgrid">' +
+        cIn(p + 'name', 'Name', { text: 1, wide: 1 }) + cIn(p + 'cased', 'Type', { options: [['cased', 'Cased'], ['open', 'Open hole']] }) + cIn(p + 'id', 'ID (in)') + cIn(p + 'top', 'Top (ft)') + cIn(p + 'bottom', 'Bottom (ft)') + cIn(p + 'mu', 'Friction up') + cIn(p + 'muSO', 'Friction down', { ph: 'same' }) + '</div></section>';
+    });
+    h += '<div class="mpair"><select id="cat-sec" aria-label="Add section from catalog"><option value="">+ Add from list…</option>' + CATSEC.map(function (s, i) { return '<option value="' + i + '">' + esc(s.name) + '</option>'; }).join('') + '</select><button class="mbtn" data-act="add-sec">+ Blank</button></div>';
+    h += '<p class="mnote">Friction: about 0.2–0.25 in casing, 0.25–0.4 in open hole. Field data often needs a higher value going down.</p>';
+    h += '<section class="mcard"><h3>Fluid and rig</h3>' + rIn('fluid.mwOut', 'Fluid density', 'ppg') + rIn('fluid.mwIn', 'Inside string', 'ppg', { ph: 'same' }) + rIn('rig.block', 'Block weight', 'klbs', { ph: '0' }) + rIn('rig.maxHook', 'Hoisting limit', 'klbs') + rIn('rig.maxTorque', 'Torque limit', 'ft-lb') + '</section>';
+    h += '<button class="mbig" data-act="m-go:string">Next: string ' + svgI('<path d="M5 12h14M13 6l6 6-6 6"/>', 20) + '</button></div>';
+    return h;
+  }
+  function mPathBlock() {
+    if (!R || !R.traj) return '<p class="mnote">Enter the well path.</p>';
+    var t = R.traj;
+    return '<div class="mpath">' + pathChart('mp-', 330, 220) + '</div><div class="mquad"><div><span>Stations</span><b>' + (R.trajSource === 'survey' ? t.st.length : 'planned') + '</b></div><div><span>Max angle</span><b>' + fx(t.maxInc, 1) + '°</b></div><div><span>Max dogleg</span><b>' + fx(t.maxDls, 1) + '°</b></div><div><span>Depth</span><b>' + n0(t.td) + ' ft</b></div></div>';
+  }
+  function mStringStrip() {
+    if (!R || R.error || !R.spans) return '<div class="mstrip"><div><span>String</span><b>-</b></div></div>';
+    var bha = 0, bw = 0; R.spans.forEach(function (s, i) { if (i < R.spans.length - 1) { bha += s.bot - s.top; bw += R.props[s.i].wb * (s.bot - s.top); } });
+    return '<div class="mstrip"><div><span>BHA length</span><b>' + n0(bha) + ' ft</b></div><div><span>BHA buoyed</span><b>' + k1(bw) + ' klbs</b></div><div><span>String in air</span><b>' + k1(R.stringWeightAir) + ' klbs</b></div></div>';
+  }
+  function scString() {
+    var h = head('String and BHA', 'Surface at top · fish at bottom', 'cases', 'Step 2 of 3') + '<div id="m-live-strip">' + mStringStrip() + '</div><div class="mbody">';
+    h += '<datalist id="m-yield"><option value="55000"><option value="75000"><option value="95000"><option value="105000"><option value="110000"><option value="135000"></datalist>';
+    var last = S.comps.length - 1;
+    for (var i = last; i >= 0; i--) {
+      var c = S.comps[i], p = 'comps.' + i + '.', isTop = i === last, open = M.open[i] != null ? M.open[i] : !c.od;
+      var sub = isTop ? 'Runs to surface' : (num(c.len) ? fx(num(c.len), 0) + ' ft' : 'No length');
+      h += '<details class="mitem"' + (open ? ' open' : '') + ' data-i="' + i + '"><summary><i style="background:' + (TYPECOL[c.type] || '#5c6c76') + '"></i><span class="mi-n">' + esc(c.name || 'New item') + '</span><span class="mi-l">' + sub + '</span></summary><div class="mgrid">' +
+        cIn(p + 'name', 'Name', { text: 1, wide: 1 }) + cIn(p + 'type', 'Type', { options: TYPES, wide: 1 }) + cIn(p + 'od', 'OD (in)') + cIn(p + 'id', 'ID (in)') + cIn(p + 'tjod', 'Tool joint OD (in)') +
+        (isTop ? cIn(p + 'len', 'Length (ft)', { dis: 1, ph: 'to surface' }) : cIn(p + 'len', 'Length (ft)')) + cIn(p + 'wt', 'Weight (lb/ft)', { ph: 'from OD/ID' }) + cIn(p + 'yield', 'Yield (psi)', { list: 'm-yield' }) + cIn(p + 'cls', 'Class', { options: [['new', 'New'], ['premium', 'Premium']] }) + cIn(p + 'maxPull', 'Max pull (klbs)') + cIn(p + 'maxTorque', 'Max torque (ft-lb)') +
+        '</div><div class="mpair sm"><button class="mbtn sm" data-act="down-comp:' + i + '"' + (isTop ? ' disabled' : '') + '>Move up</button><button class="mbtn sm" data-act="up-comp:' + i + '"' + (i === 0 ? ' disabled' : '') + '>Move down</button><button class="mbtn sm warn" data-act="del-comp:' + i + '">Remove</button></div></details>';
+    }
+    h += '<div class="mpair"><select id="cat-comp" aria-label="Add item from catalog"><option value="">+ Add from catalog…</option>' + CAT.map(function (g, gi) { return '<optgroup label="' + esc(g[0]) + '">' + g[1].map(function (o, oi) { return '<option value="' + gi + ':' + oi + '">' + esc(o.name) + '</option>'; }).join('') + '</optgroup>'; }).join('') + '</select><button class="mbtn" data-act="add-comp">+ Blank</button></div>';
+    h += '<p class="mnote">New items go just above the bottom tools. Tap an item to edit it. Catalog values are typical: check the tally and tool manuals, and add pull and torque ratings for fishing tools.</p>';
+    h += '<button class="mbig" data-act="m-go:op">Next: operation ' + svgI('<path d="M5 12h14M13 6l6 6-6 6"/>', 20) + '</button></div>';
+    return h;
+  }
+  function scOp() {
+    var md = S.op.mode || 'latched', h = head('Operation', 'What are you doing on the fish?', 'cases', 'Step 3 of 3') + '<div class="mbody">';
+    h += '<div class="mchips" role="group" aria-label="Job type">' + [['trip', 'Tripping'], ['latched', 'Latched + jarring'], ['mill', 'Milling / washover'], ['backoff', 'Back-off']].map(function (q) { return '<button data-act="m-mode:' + q[0] + '" aria-pressed="' + (md === q[0]) + '">' + q[1] + '</button>'; }).join('') + '</div>';
+    h += '<section class="mcard">' + rIn('op.depth', md === 'trip' ? 'String depth' : 'Top of fish', 'ft MD') + rIn('op.fish', 'Fish', '', { text: 1, ph: 'e.g. tubing + packer' });
+    if (md === 'trip') h += rIn('op.rpm', 'Rotation', 'rpm', { ph: '0' }) + rIn('op.speed', 'Trip speed', 'ft/min');
+    if (md === 'latched') h += rIn('op.overpull', 'Planned overpull', 'klbs') + rIn('op.setdown', 'Planned set-down', 'klbs') + rIn('op.jarUp', 'Jar up setting', 'klbs', { ph: 'from manual' }) + rIn('op.jarDown', 'Jar down setting', 'klbs', { ph: 'from manual' }) + rIn('op.pumpOpen', 'Pump-open force', 'klbs', { ph: '0' }) + rIn('op.torqueAtFish', 'Torque wanted at fish', 'ft-lb') + rIn('op.rpm', 'Rotation while pulling', 'rpm') + rIn('op.speed', 'Pipe speed', 'ft/min');
+    if (md === 'mill') h += rIn('op.wob', 'Weight on mill/shoe', 'klbs') + rSel('op.tobMode', 'Torque at tool', [['enter', 'Enter value'], ['est', 'Estimate']], { re: 1 }) + (S.op.tobMode === 'est' ? rIn('op.muCut', 'Cutting coefficient', '', { ph: '0.3' }) + rIn('op.cutOD', 'Cutting face OD', 'in', { ph: 'tool OD' }) + rIn('op.cutID', 'Cutting face ID', 'in', { ph: 'tool ID' }) : rIn('op.tob', 'Torque at tool', 'ft-lb', { ph: 'enter' })) + rIn('op.millLen', 'Interval to mill/wash', 'ft', { ph: 'optional' }) + rIn('op.fishOD', 'Largest fish OD', 'in', { ph: 'optional' }) + rIn('op.rpm', 'Rotation', 'rpm', { ph: 'optional' });
+    if (md === 'backoff') h += rIn('op.backoffDepth', 'Back-off depth', 'ft MD') + rIn('op.torqueAtFish', 'Torque wanted at connection', 'ft-lb');
+    h += '</section><div class="msec"><h2>Weights read before latching</h2><span>optional</span></div><div class="mtri3">' + cIn('op.measPU', 'Pick-up (klbs)') + cIn('op.measSO', 'Slack-off (klbs)') + cIn('op.measROB', 'Rotating (klbs)', { ph: 'add' }) + '</div>';
+    h += '<div id="cal-out"></div>';
+    h += '<details class="mmore"><summary>Stretch test (find the stuck point)</summary><section class="mcard flat">' + rIn('op.stretchHL1', 'First pull, indicator', 'klbs') + rIn('op.stretchHL2', 'Second pull, indicator', 'klbs') + rIn('op.stretchIn', 'Stretch between marks', 'in') + '</section></details>';
+    h += '<details class="mmore"><summary>Calculation settings</summary><section class="mcard flat">' + rIn('settings.sens', 'Friction band', '±') + rSel('settings.lambda', 'Helical buckling coefficient', [['2.83', '2.83'], ['3.66', '3.66'], ['5.65', '5.65']]) + rIn('settings.dfTension', 'Tension design factor', '') + rIn('settings.dfTorsion', 'Torsion design factor', '') + rSel('settings.stiff', 'BHA stiffness', [['on', 'Beam model'], ['off', 'Soft-string only']]) + rIn('settings.elLen', 'Element length', 'ft') + '</section></details>';
+    h += '<button class="mbig" data-act="m-go:results">Show results ' + svgI('<path d="M5 12h14M13 6l6 6-6 6"/>', 20) + '</button></div>';
+    return h;
+  }
+  function mCal() {
+    var co = $('#cal-out'); if (!co) return;
+    if (!R || !R.cal) { co.innerHTML = ''; return; }
+    var c = R.cal, h = '<section class="mcard"><h3>Model against your readings</h3>';
+    [['Pick-up', c.measPU, R.hlPU], ['Slack-off', c.measSO, R.hlSO], ['Rotating', c.measROB, R.hlROB]].forEach(function (r) { if (!r[1]) return; var d = r[1] - r[2], a = Math.abs(d) / 1000, s = a <= 3 ? ['ok', 'Match'] : a <= 6 ? ['warn', 'Close'] : ['bad', 'Far off']; h += '<div class="mrow ro"><span class="ml">' + r[0] + '</span><span class="mv"><b>' + k1(r[1]) + '</b> vs ' + k1(r[2]) + ' ' + stBadge(s[0], s[1]) + '</span></div>'; });
+    h += '<div class="mpair sm">' + (ok(c.kPU) && Math.abs(c.kPU - 1) > 0.02 ? '<button class="mbtn sm" data-act="apply-cal-pu:' + c.kPU.toFixed(4) + '">Fit pick-up (friction ×' + c.kPU.toFixed(2) + ')</button>' : '') + (ok(c.kSO) && Math.abs(c.kSO - 1) > 0.02 ? '<button class="mbtn sm" data-act="apply-cal-so:' + c.kSO.toFixed(4) + '">Fit slack-off (×' + c.kSO.toFixed(2) + ')</button>' : '') + '</div><p class="mnote">If rotating weight is off, fix block weight, fluid or pipe weight first, not friction.</p></section>';
+    co.innerHTML = h;
+  }
+  function scResults() {
+    var h = head('Results', caseSub() + (R && R.D ? ' · ' + n0(R.D) + ' ft' : ''), 'cases') + '<div class="mbody">';
+    if (!R || R.error) return h + '<section class="mcard"><div class="mstatus bad"><b>!</b><div><strong>Missing input</strong><span>' + esc(R && R.error || 'Fill in the well, string and operation.') + '</span></div></div></section></div>';
+    var st = stateOf(), o = S.op;
+    h += '<div class="mstatus ' + st[0] + '"><b>' + (st[0] === 'ok' ? '✓' : '!') + '</b><div><strong>' + st[1] + '</strong><span>' + st[2] + '</span></div></div>';
+    function tile(lab, val, unit, foot, cls) { return '<div class="mtile"><span>' + esc(lab) + '</span><b>' + esc(val) + '<small> ' + esc(unit) + '</small></b><em class="' + (cls || '') + '">' + foot + '</em></div>'; }
+    function vs(meas, calc) { if (!num(meas)) return null; var d = Math.abs(num(meas) * 1000 - calc) / 1000; return ['Actual ' + esc(meas) + ' · ' + (d <= 3 ? 'match' : d <= 6 ? 'close' : 'far off'), d <= 3 ? 'g' : d <= 6 ? 'w' : 'b']; }
+    var a = vs(o.measPU, R.hlPU), b = vs(o.measSO, R.hlSO), c = vs(o.measROB, R.hlROB);
+    h += '<div class="mtiles">' + tile('Pick-up', k1(R.hlPU), 'klbs', a ? a[0] : 'Normal ' + k1(R.hlPUlo) + '–' + k1(R.hlPUhi), a && a[1]) + tile('Slack-off', k1(R.hlSO), 'klbs', b ? b[0] : 'Normal ' + k1(R.hlSOhi) + '–' + k1(R.hlSOlo), b && b[1]) + tile('Rotating', k1(R.hlROB), 'klbs', c ? c[0] : 'Weight with no drag', c && c[1]) + tile('Torque, off bottom', n0(R.tqROB), 'ft-lb', 'Rotating, no weight on the fish') + '</div>';
+    if (R.pullPlan) { var pct = Math.max(0, Math.min(100, Math.round(R.pullPlan.eff * 100))); h += '<section class="mcard"><div class="mcard-h"><b>Overpull reaching the fish</b><b class="acc">' + pct + '%</b></div><div class="mbar"><i style="width:' + pct + '%"></i></div><p class="mtxt">Pull <b>' + k1(R.pullPlan.x) + '</b> klbs above pick-up (indicator <b>' + k1(R.pullPlan.hl) + '</b>) and <b>' + k1(R.pullPlan.fish) + '</b> klbs reaches the fish. The rest is lost to wall friction.</p></section>'; }
+    if (R.maxPull.hl != null) h += '<section class="mcard"><div class="mrow ro"><span class="ml">Maximum safe pull<small>Limited by ' + esc(R.maxPull.limitedBy) + '</small></span><span class="mv"><b>' + k1(R.maxPull.hl) + '</b>&nbsp;klbs</span></div></section>';
+    var jarRows = '';
+    if (R.jar && R.jar.up) jarRows += '<div class="mrow ro"><span class="ml">Jar up trips at</span><span class="mv"><b>' + k1(R.jar.up) + '</b>&nbsp;klbs</span></div>';
+    if (R.jar && R.jar.down != null) jarRows += '<div class="mrow ro"><span class="ml">Jar down trips at</span><span class="mv"><b>' + k1(R.jar.down) + '</b>&nbsp;klbs</span></div>';
+    if (R.mill) jarRows += '<div class="mrow ro"><span class="ml">Milling: indicator / torque</span><span class="mv"><b>' + k1(R.mill.hl) + '</b>&nbsp;klbs · <b>' + n0(R.mill.tq) + '</b>&nbsp;ft-lb</span></div>';
+    if (R.torque.target) jarRows += '<div class="mrow ro"><span class="ml">Surface torque for ' + n0(R.torque.target) + ' ft-lb at fish</span><span class="mv"><b>' + n0(R.torque.surf) + '</b>&nbsp;ft-lb</span></div>';
+    if (R.backoff) jarRows += '<div class="mrow ro"><span class="ml">Back-off neutral point</span><span class="mv"><b>' + k1(R.backoff.neutral) + '</b>&nbsp;klbs</span></div>';
+    if (jarRows) h += '<section class="mcard"><h3>Readings for the rig</h3>' + jarRows + '</section>';
+    var w = Math.min(window.innerWidth || 390, 560) - 64, C = charts('m-', Math.max(260, w));
+    h += '<section class="mcard mchart">' + C.broom + '</section>';
+    var ws = R.warnings || [];
+    h += '<div class="msec"><h2>What to check</h2><span>' + ws.length + '</span></div>' + (ws.length ? ws.slice().sort(function (x, y) { return (x.lvl === 'bad' ? 0 : 1) - (y.lvl === 'bad' ? 0 : 1); }).map(function (x) { return '<div class="mwarn ' + x.lvl + '"><i></i><span>' + esc(x.msg) + '</span></div>'; }).join('') : '<p class="mnote">Nothing to check.</p>');
+    h += '<details class="mmore"><summary>Overpull and set-down tables</summary><section class="mcard flat">' + C.pull + tblPull() + C.down + tblDown() + '</section></details>';
+    if (R.jar) h += '<details class="mmore"><summary>Jar details</summary><section class="mcard flat">' + blkJar() + '</section></details>';
+    h += '<details class="mmore"><summary>Torque and wind-up</summary><section class="mcard flat">' + blkTorque() + '</section></details>';
+    if (R.mill || R.wash) h += '<details class="mmore"><summary>Milling and washover</summary><section class="mcard flat">' + (C.millHL ? C.millHL + C.millTQ : '') + blkMill() + (R.wash ? blkWash() : '') + '</section></details>';
+    if (blkExtra()) h += '<details class="mmore"><summary>Stuck point, back-off, calibration</summary><section class="mcard flat">' + blkExtra() + '</section></details>';
+    h += '<details class="mmore"><summary>BHA checks</summary><section class="mcard flat">' + tblBha() + '</section></details>';
+    h += '<details class="mmore"><summary>Tension, side force and torque along the string</summary><section class="mcard flat">' + C.tension + C.side + C.torque + '</section></details>';
+    h += '<button class="mbig" data-act="m-go:report">Make the PDF report ' + svgI('<path d="M5 12h14M13 6l6 6-6 6"/>', 20) + '</button></div>';
+    return h;
+  }
+  function scReport() {
+    var id = S.settings.lang === 'id', h = head('PDF report', 'For the fisherman and company rep', 'results') + '<div class="mbody">';
+    h += seg([['en', 'English'], ['id', 'Bahasa Indonesia']], id ? 'id' : 'en', 'm-lang:', 'Report language');
+    h += '<div class="mpages"><div><div class="pg p1"><i></i><i></i><i></i><i></i></div><span>' + (id ? '1 · Ringkasan' : '1 · Summary') + '</span></div><div><div class="pg p2"><i></i><i></i></div><span>' + (id ? '2 · Grafik' : '2 · Charts') + '</span></div><div><div class="pg p3"><i></i><i></i><i></i><i></i><i></i></div><span>' + (id ? '3 · Detail' : '3 · Details') + '</span></div></div>';
+    h += '<section class="mcard"><h3>Sign-off names</h3>' + rIn('job.preparedBy', 'Prepared by', '', { text: 1, ph: 'Your name' }) + rIn('job.fisherman', 'Fisherman', '', { text: 1, ph: 'Name' }) + rIn('job.companyRep', 'Company rep', '', { text: 1, ph: 'Name' }) + rIn('job.notes', 'Notes', '', { text: 1, ph: 'Optional' }) + '</section>';
+    h += '<p class="mnote">A4, 3–4 pages, made on the phone with no signal.</p>';
+    h += '<button class="mbig" data-act="pdf">' + svgI('<path d="M12 3v12M7 10l5 5 5-5M5 21h14"/>', 20) + 'Download PDF</button>';
+    if (navigator.share) h += '<button class="mbig alt" data-act="m-share">' + svgI('<path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M12 3v12M8 7l4-4 4 4"/>', 18) + 'Share (WhatsApp, email…)</button>';
+    h += '<div class="mpair"><button class="mbtn" data-act="save-case">Save case file</button></div></div>';
+    return h;
+  }
+  function mRender() {
+    var app = $('#m-app'), y = window.scrollY, f = { cases: scCases, well: scWell, string: scString, op: scOp, results: scResults, report: scReport }[M.tab] || scCases;
+    app.innerHTML = f() + (M.tab === 'cases' ? '' : nav());
+    app.className = 'm-' + M.tab;
+    if (M.tab === 'op') mCal();
+    window.scrollTo(0, M.keepScroll ? y : 0); M.keepScroll = false;
+    var b = $('#b-install'); if (b && window.__tdInstall) b.style.display = 'inline-flex';
+  }
+  function mLive() {
+    if (M.tab === 'results' || M.tab === 'cases') { M.keepScroll = true; mRender(); return; }
+    var p = $('#m-live-path'); if (p) p.innerHTML = mPathBlock();
+    var s = $('#m-live-strip'); if (s) s.innerHTML = mStringStrip();
+    if (M.tab === 'op') mCal();
+  }
+  function mGo(t) { if (!/^(cases|well|string|op|results|report)$/.test(t)) t = 'cases'; M.tab = t; try { if (location.hash !== '#' + t) history.replaceState(null, '', '#' + t); } catch (e) { /* ignore */ } mRender(); }
+  function mAct(p, el) {
+    switch (p[0]) {
+      case 'm-go': mGo(p[1]); return true;
+      case 'm-new': M.noSave = false; M.store.cur = uid(); S = baseCase(); S.op.mode = 'latched'; calc(); mGo('well'); return true;
+      case 'm-example': mOpenCase(exampleCase()); mGo('results'); return true;
+      case 'm-builtin': mOpenCase(JSON.parse(JSON.stringify(BUILTIN[p[1]].case))); mGo('results'); return true;
+      case 'm-open': var e = M.store.list.filter(function (x) { return x.id === p[1]; })[0]; if (e) { mOpenCase(e.c, e.id); mGo('results'); } return true;
+      case 'm-del':
+        if (M.del !== p[1]) { M.del = p[1]; mRender(); setTimeout(function () { if (M.del === p[1]) { M.del = null; if (M.tab === 'cases') mRender(); } }, 3000); return true; }
+        M.store.list = M.store.list.filter(function (x) { return x.id !== p[1]; }); if (M.store.cur === p[1]) M.store.cur = null; M.del = null; mSaveStore(); mRender(); toast('Case deleted.'); return true;
+      case 'm-mode': S.op.mode = p[1]; M.keepScroll = true; mRender(); calc(); return true;
+      case 'm-lang': S.settings.lang = p[1]; M.keepScroll = true; mRender(); mAutosave(); return true;
+      case 'm-share':
+        try { var bytes = buildPDF(S.settings.lang || 'en'), file = new File([bytes], fileName('pdf'), { type: 'application/pdf' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'Torque & drag report ' + (S.job.well || '') }).catch(function () { /* cancelled */ });
+          else saveFile(fileName('pdf'), bytes, 'application/pdf');
+        } catch (e2) { toast('Could not make the PDF: ' + e2.message); }
+        return true;
+    }
+    return false;
+  }
+  function mStart() {
+    mLoadStore();
+    var cur = M.store.list.filter(function (x) { return x.id === M.store.cur; })[0];
+    if (cur) { S = merge(baseCase(), cur.c); }
+    else { var old = null; try { old = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { old = null; } if (old && old.v === 1 && !old.example) S = merge(baseCase(), old); else { S = merge(baseCase(), exampleCase()); M.noSave = true; } M.store.cur = uid(); }
+    S.comps = (S.comps || []).map(comp); if (!S.op.mode) S.op.mode = 'latched';
+    document.addEventListener('toggle', function (ev) { var d = ev.target; if (d && d.classList && d.classList.contains('mitem')) M.open[d.getAttribute('data-i')] = d.open; }, true);
+    window.addEventListener('hashchange', function () { var t = (location.hash || '').replace('#', ''); if (t && t !== M.tab) { M.tab = t; mRender(); } });
+    M.tab = (location.hash || '').replace('#', '') || 'cases';
+    calc(); mGo(M.tab);
+  }
+
   /* ---------- events ---------- */
   function showTab(t) {
+    if (MOBILE) return;
     if (!TABS.some(function (x) { return x[0] === t; })) t = 'results';
     curTab = t;
     TABS.forEach(function (x) { $('#p-' + x[0]).classList.toggle('on', x[0] === t); });
@@ -1684,6 +1962,7 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
   }
   function act(a, el) {
     var p = a.split(':'), i = parseInt(p[1], 10);
+    if (MOBILE && mAct(p, el)) return;
     switch (p[0]) {
       case 'mode': S.traj.mode = p[1]; renderInputs(); calc(); break;
       case 'add-sec': S.secs.push({ name: '', cased: 'cased', top: S.secs.length ? S.secs[S.secs.length - 1].bottom : '0', bottom: '', id: '', mu: '0.25', muSO: '' }); renderInputs(); calc(); break;
@@ -1721,20 +2000,22 @@ details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
   document.addEventListener('change', function (ev) { if (ev.target.tagName === 'SELECT') onInput(ev); });
   document.addEventListener('pointermove', onHover); document.addEventListener('pointerdown', onHover);
   document.addEventListener('scroll', hideTip, true);
-  $('#file-case').addEventListener('change', function () { readFile(this, function (txt) { try { loadCase(JSON.parse(txt)); toast('Case loaded.'); } catch (e) { toast('That file is not a saved case.'); } }); });
+  $('#file-case').addEventListener('change', function () { readFile(this, function (txt) { try { if (MOBILE) { M.store.cur = uid(); M.noSave = false; } loadCase(JSON.parse(txt)); if (MOBILE) mGo('results'); toast('Case loaded.'); } catch (e) { toast('That file is not a saved case.'); } }); });
   $('#file-survey').addEventListener('change', function () { readFile(this, function (txt) { var n = parseSurvey(txt).length; if (!n) { toast('No survey stations found in that file.'); return; } S.traj.surveyText = txt; S.traj.mode = 'survey'; renderInputs(); calc(); toast(n + ' stations imported.'); }); });
-  window.addEventListener('hashchange', function () { showTab((location.hash || '').replace('#', '')); });
+  if (!MOBILE) window.addEventListener('hashchange', function () { showTab((location.hash || '').replace('#', '')); });
   var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(renderDynamic, 250); });
   window.addEventListener('beforeprint', function () { var r = $('#report'); if (r && !R.error) r.outerHTML = reportHTML(700); var q = $('#simple-report'); if (q && !R.error) q.outerHTML = simpleHTML(700); });
   window.addEventListener('afterprint', function () { renderDynamic(); });
 
   /* ---------- start ---------- */
+  if (MOBILE) mStart(); else {
   if (Object.keys(BUILTIN).length) $('.top .case').insertAdjacentHTML('afterend', '<select id="builtin" aria-label="Open an example case" style="max-width:260px;font-size:13px"><option value="">Open example: ESTA-6…</option>' + Object.keys(BUILTIN).map(function (k) { return '<option value="' + k + '">' + esc(BUILTIN[k].label) + '</option>'; }).join('') + '</select>');
   if ($('#builtin')) $('#builtin').addEventListener('change', function () { var k = this.value; if (!k) return; loadCase(JSON.parse(JSON.stringify(BUILTIN[k].case))); showTab('results'); toast(BUILTIN[k].label + ' opened.'); this.value = ''; });
   $('#tabs').innerHTML = TABS.map(function (t, i) { return '<button role="tab" data-tab="' + t[0] + '" id="tab-' + t[0] + '"><b>' + (i + 1) + '</b>' + esc(t[1]) + '</button>'; }).join('');
   var saved = null; try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { saved = null; }
   S = merge(baseCase(), saved && saved.v === 1 && !saved.example ? saved : (BUILTIN.overshot_4235 ? JSON.parse(JSON.stringify(BUILTIN.overshot_4235.case)) : exampleCase())); S.comps = (S.comps || []).map(comp);
   renderInputs(); showTab((location.hash || '').replace('#', '') || 'results'); calc();
+  }
 })();
 </script>
 </body>
