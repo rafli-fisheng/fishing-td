@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fishing Torque &amp; Drag</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b6177">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fishing T&amp;D">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<style id="css-tokens">
+/* Layout idea: instrument-panel tool. Tabs for input, tiles and charts for results, a paper-style report sheet. */
+:root{
+  --bg:#eef1f3; --surface:#fcfcfb; --soft:#e4eaed; --ink:#14212a; --muted:#56646e; --line:#d2d9de;
+  --accent:#0b6177; --accent-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;
+  --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
+  --font-body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-display:"Avenir Next Condensed","Roboto Condensed","Arial Narrow",ui-sans-serif,system-ui,sans-serif;
+  --font-num:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+}
+</style>
+<style id="css-report">
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0;letter-spacing:.01em}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;white-space:nowrap}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.n{font-family:var(--font-num);font-size:12.5px;white-space:nowrap}
+.scroll{overflow-x:auto}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 3px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--surface);white-space:nowrap}
+.pill i{font-style:normal;width:18px;height:18px;border-radius:50%;display:inline-grid;place-items:center;color:#fff;font-size:11px;line-height:1}
+.pill.ok i{background:var(--good)} .pill.warn i{background:var(--warn);color:#3a2a00} .pill.bad i{background:var(--crit)}
+.alerts{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.alerts li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:8px 10px;border:1px solid var(--line);border-left-width:4px;border-radius:4px;background:var(--surface);font-size:13.5px}
+.alerts li.warn{border-left-color:var(--warn)} .alerts li.bad{border-left-color:var(--crit)} .alerts li.ok{border-left-color:var(--good)}
+.chart{margin:0;min-width:0}
+.chart figcaption{font-weight:600;font-size:14px;margin-bottom:2px}
+.chart .sub{color:var(--muted);font-size:12px;margin-bottom:4px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted);margin-bottom:2px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend b{display:inline-block;width:18px;height:0;border-top:2.5px solid var(--muted)}
+.legend b.s1{border-color:var(--s1)} .legend b.s2{border-color:var(--s2)} .legend b.s3{border-color:var(--s3)}
+.legend b.crit{border-color:var(--crit);border-top-style:dashed} .legend b.sn{border-color:var(--muted);border-top-style:dashed}
+.legend b.band{height:9px;border:0;background:var(--s1);opacity:.22}
+svg.plot{display:block;max-width:100%;height:auto;background:var(--surface);touch-action:pan-y}
+svg.plot text{font-family:var(--font-body);font-size:11px;fill:var(--muted)}
+svg.plot .grid{stroke:var(--line);stroke-width:1}
+svg.plot .axis{stroke:var(--muted);stroke-width:1}
+svg.plot .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+svg.plot .s1{stroke:var(--s1)} svg.plot .s2{stroke:var(--s2)} svg.plot .s3{stroke:var(--s3)} svg.plot .sn{stroke:var(--muted)} svg.plot .crit{stroke:var(--crit)}
+svg.plot .dash{stroke-dasharray:6 4}
+svg.plot .bd{stroke:none;opacity:.16} svg.plot .bd.s1{fill:var(--s1)} svg.plot .bd.s2{fill:var(--s2)}
+svg.plot .dot{stroke:var(--surface);stroke-width:2} svg.plot .dot.s1{fill:var(--s1)} svg.plot .dot.s2{fill:var(--s2)} svg.plot .dot.s3{fill:var(--s3)} svg.plot .dot.sn{fill:var(--muted)}
+svg.plot .mk{fill:var(--ink);font-size:11px}
+svg.plot .xh{stroke:var(--ink);stroke-width:1;opacity:.45;pointer-events:none}
+/* report sheet */
+.rp{background:var(--surface);color:var(--ink);border:1px solid var(--line);max-width:860px;margin:0 auto;padding:28px 30px}
+.rp h1{font-size:26px} .rp h2{font-size:18px;margin:26px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--ink)} .rp h3{font-size:15px;margin:16px 0 6px}
+.rp .rhead{display:flex;justify-content:space-between;gap:16px;align-items:flex-end;border-bottom:3px solid var(--accent);padding-bottom:10px;flex-wrap:wrap}
+.rp .rhead small{color:var(--muted);display:block;font-size:12px}
+.rp .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px 20px;margin:12px 0;font-size:13.5px}
+.rp .meta div{display:flex;gap:8px;border-bottom:1px dotted var(--line);padding:3px 0} .rp .meta span{color:var(--muted);min-width:96px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:8px 0}
+.kv>div{border:1px solid var(--line);border-radius:4px;padding:9px 11px;background:var(--surface);min-width:0}
+.kv .lab{font-size:12px;color:var(--muted)} .kv .val{font-family:var(--font-num);font-size:21px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25}
+.kv .val small{font-family:var(--font-body);font-size:12px;font-weight:500;color:var(--muted);margin-left:4px} .kv .more{font-size:12px;color:var(--muted)}
+.rp figure{margin:14px 0;break-inside:avoid} .rp table{break-inside:auto} .rp tr{break-inside:avoid}
+.rp th{white-space:normal;font-size:11.5px;vertical-align:bottom} .rp td{font-size:12.5px} .rp td.n{font-size:12px}
+.rp .note{font-size:12.5px;color:var(--muted)} .rp ol,.rp ul{margin:6px 0;padding-left:20px;font-size:13.5px}
+.sign{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:44px;break-inside:avoid}
+.sign div{border-top:1px solid var(--ink);padding-top:6px;font-size:12.5px} .sign b{display:block;min-height:1.3em}
+.pb{break-before:page}
+.srst{display:flex;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-left-width:6px;border-radius:4px;margin:10px 0;font-size:15px}
+.srst.ok{border-left-color:var(--good)} .srst.warn{border-left-color:var(--warn)} .srst.bad{border-left-color:var(--crit)} .srst .pill{font-size:14px}
+.sr .kv .more{font-size:12.5px;line-height:1.4;margin-top:3px}
+@media (max-width:560px){.rp{padding:16px 14px}.sign{grid-template-columns:1fr;gap:34px}}
+@page{margin:12mm}
+</style>
+<style id="css-app">
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --bg:#0f1519; --surface:#171d21; --soft:#202a31; --ink:#e6edf0; --muted:#9aa8b1; --line:#2d3a43;
+  --accent:#55b7cf; --accent-ink:#06222b; --s1:#3987e5; --s2:#d95926; --s3:#199e70;}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#0f1519; --surface:#171d21; --soft:#202a31; --ink:#e6edf0; --muted:#9aa8b1; --line:#2d3a43;
+  --accent:#55b7cf; --accent-ink:#06222b; --s1:#3987e5; --s2:#d95926; --s3:#199e70;}
+@media print{:root:root:root{color-scheme:light;
+  --bg:#ffffff; --surface:#ffffff; --soft:#e4eaed; --ink:#14212a; --muted:#56646e; --line:#d2d9de;
+  --accent:#0b6177; --accent-ink:#ffffff; --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a;}
+  body>*:not(main){display:none!important} main{padding:0!important;max-width:none!important}
+  .panel{display:none!important} #p-report{display:block!important} #p-report .bar,#p-report .hint{display:none!important}
+  .rp{border:0;padding:0;max-width:none} .scroll{overflow:visible}
+  body.ps #p-report{display:none!important} body.ps #p-simple{display:block!important} #p-simple .bar,#p-simple .hint{display:none!important}}
+.top{background:var(--ink);color:var(--bg);padding:10px 16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.top h1{font-size:20px;letter-spacing:.04em;text-transform:uppercase}
+.top .case{font-size:13px;opacity:.8;margin-right:auto}
+button,.btn{font:inherit;font-size:13.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:4px;cursor:pointer}
+button:hover{border-color:var(--accent)} button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.pri{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.ghost{background:transparent;color:inherit;border-color:currentColor;opacity:.85}
+button.ic{padding:3px 8px;font-size:13px;line-height:1.2}
+.tabs{display:flex;gap:0;overflow-x:auto;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:11px 14px;white-space:nowrap;color:var(--muted)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs i.tb{font-style:normal;margin-left:6px;font-size:12px} .tabs i.tb.ok{color:var(--good)} .tabs i.tb.todo{color:var(--warn);font-size:16px;line-height:0}
+.tabs button b{font-family:var(--font-num);font-weight:500;font-size:11px;margin-right:6px;opacity:.7}
+main{max-width:1180px;margin:0 auto;padding:16px}
+.panel{display:none} .panel.on{display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px 16px;min-width:0}
+.card>h2{font-size:17px;margin-bottom:10px} .card>h2 small{font-family:var(--font-body);font-weight:400;font-size:12.5px;color:var(--muted);margin-left:8px}
+.help{color:var(--muted);font-size:13px;margin:0 0 10px;max-width:70ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px 14px}
+.fld{display:grid;gap:3px;font-size:12.5px;color:var(--muted);min-width:0}
+.fld em{font-style:normal;opacity:.8}
+input,select,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
+textarea{font-family:var(--font-num);font-size:12.5px;min-height:150px;resize:vertical}
+.tbl input,.tbl select{padding:4px 6px;font-size:13px;min-width:62px} .tbl td{padding:3px 4px;border-bottom:0} .tbl th{padding:3px 6px}
+.tbl input{min-width:80px} .tbl select{min-width:120px} .tbl input.w{min-width:190px} .tbl td.act{white-space:nowrap}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;border-radius:0;background:var(--surface)} .seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.banner{background:var(--soft);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:4px;padding:9px 12px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px}
+.tip{position:fixed;z-index:20;pointer-events:none;background:var(--ink);color:var(--bg);padding:7px 9px;border-radius:4px;font-size:12px;line-height:1.5;max-width:240px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.tip b{font-family:var(--font-num)} .tip i{display:inline-block;width:12px;border-top:2.5px solid;margin-right:6px;vertical-align:middle}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:4px;font-size:13.5px;z-index:30;max-width:90vw}
+details>summary{cursor:pointer;font-weight:600;font-size:13.5px;padding:4px 0}
+.hint{font-size:12.5px;color:var(--muted)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+@media (prefers-reduced-motion:no-preference){button{transition:border-color .12s}}
+@media (max-width:600px){
+  input,select,textarea{font-size:16px}
+  .top{padding:8px 12px;gap:8px}
+  .top h1{font-size:16px;width:100%}
+  .top .case{order:9;width:100%;font-size:12px}
+  .top button{font-size:12px;padding:6px 4px;flex:1 1 0;white-space:nowrap}
+  .top select{font-size:13px;padding:5px 8px}
+  #builtin{max-width:100%!important;flex:1 1 100%}
+  main{padding:10px}
+  .card{padding:12px}
+  .tabs button{padding:10px 11px}
+  .kv{grid-template-columns:1fr 1fr}
+  .kv .val{font-size:18px}
+  .tbl input{min-width:72px}
+}
+#b-install{display:none}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Fishing Torque &amp; Drag</h1>
+  <span class="case" id="case-name"></span>
+  <button class="ghost" id="b-install">Install app</button>
+  <button class="ghost" data-act="pdf" id="b-pdf">Download PDF</button>
+  <button class="ghost" data-act="save-case" id="b-save">Save case</button>
+  <button class="ghost" data-act="load-case" id="b-load">Load case</button>
+  <button class="ghost" data-act="new-blank" id="b-new">New case</button>
+</header>
+<nav class="tabs" role="tablist" aria-label="Sections" id="tabs"></nav>
+<main>
+  <div id="banner"></div>
+  <section class="panel" id="p-job"></section>
+  <section class="panel" id="p-path"></section>
+  <section class="panel" id="p-wellbore"></section>
+  <section class="panel" id="p-string"></section>
+  <section class="panel" id="p-operation"></section>
+  <section class="panel" id="p-results"></section>
+  <section class="panel" id="p-simple"></section>
+  <section class="panel" id="p-report"></section>
+</main>
+<div class="tip" id="tip" hidden></div>
+<div class="toast" id="toast" role="status" hidden></div>
+<input type="file" id="file-case" accept=".json,application/json" hidden>
+<input type="file" id="file-survey" accept=".csv,.txt,.las,text/plain,text/csv" hidden>
+<script>/* Torque & drag engine. Internal units: ft, in, lb, ft-lb, ppg, degrees. Loads in lb (UI shows klbs). */
+(function (root) {
+  'use strict';
+  var E = 30e6, G = 11.5e6, DEG = Math.PI / 180, PI = Math.PI;
+
+  function tvec(inc, azi) { var i = inc * DEG, a = azi * DEG; return [Math.sin(i) * Math.cos(a), Math.sin(i) * Math.sin(a), Math.cos(i)]; }
+  function dot(a, b) { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2]; }
+  function ang(a, b) { return Math.acos(Math.max(-1, Math.min(1, dot(a, b)))); }
+  function rf(b) { return b < 1e-4 ? 1 + b * b / 12 : 2 / b * Math.tan(b / 2); }
+  function pos(v) { v = parseFloat(v); return isFinite(v) && v > 0 ? v : 0; }
+
+  /* ---------- Trajectory: minimum curvature ---------- */
+  function buildTraj(rows) {
+    var st = (rows || []).map(function (r) { return { md: parseFloat(r.md), inc: parseFloat(r.inc), azi: parseFloat(r.azi) }; })
+      .filter(function (r) { return isFinite(r.md) && isFinite(r.inc) && r.md >= 0; });
+    st.forEach(function (r) { if (!isFinite(r.azi)) r.azi = 0; });
+    st.sort(function (a, b) { return a.md - b.md; });
+    st = st.filter(function (r, i) { return i === 0 || r.md > st[i - 1].md + 1e-6; });
+    if (!st.length || st[0].md > 1e-6) st.unshift({ md: 0, inc: 0, azi: st.length ? st[0].azi : 0 });
+    var tvd = 0, n = 0, e = 0, maxInc = 0, maxDls = 0;
+    st.forEach(function (s, i) {
+      s.t = tvec(s.inc, s.azi);
+      if (i) {
+        var p = st[i - 1], dm = s.md - p.md, b = ang(p.t, s.t), k = rf(b) * dm / 2;
+        tvd += k * (p.t[2] + s.t[2]); n += k * (p.t[0] + s.t[0]); e += k * (p.t[1] + s.t[1]);
+        s.dl = b; s.dls = b / DEG * 100 / dm; maxDls = Math.max(maxDls, s.dls);
+      } else { s.dl = 0; s.dls = 0; }
+      s.tvd = tvd; s.n = n; s.e = e; maxInc = Math.max(maxInc, s.inc);
+    });
+    return { st: st, maxInc: maxInc, maxDls: maxDls, td: st[st.length - 1].md };
+  }
+
+  function trajAt(tr, md) {
+    var st = tr.st, last = st[st.length - 1];
+    if (md >= last.md) {
+      var d = md - last.md;
+      return { md: md, t: last.t, tvd: last.tvd + d * last.t[2], n: last.n + d * last.t[0], e: last.e + d * last.t[1], inc: last.inc, dls: 0 };
+    }
+    var lo = 0, hi = st.length - 1;
+    while (hi - lo > 1) { var m = (lo + hi) >> 1; if (st[m].md <= md) lo = m; else hi = m; }
+    var p = st[lo], q = st[hi], dm = q.md - p.md, f = (md - p.md) / dm, b = q.dl, t;
+    if (b < 1e-9) t = p.t;
+    else { var s = Math.sin(b), a1 = Math.sin((1 - f) * b) / s, a2 = Math.sin(f * b) / s; t = [a1 * p.t[0] + a2 * q.t[0], a1 * p.t[1] + a2 * q.t[1], a1 * p.t[2] + a2 * q.t[2]]; }
+    var k = rf(f * b) * f * dm / 2;
+    return { md: md, t: t, tvd: p.tvd + k * (p.t[2] + t[2]), n: p.n + k * (p.t[0] + t[0]), e: p.e + k * (p.t[1] + t[1]),
+      inc: Math.acos(Math.max(-1, Math.min(1, t[2]))) / DEG, dls: q.dls };
+  }
+
+  /* Planned profile when no survey exists: vertical, build-and-hold (J) or build-hold-drop (S). */
+  function profileStations(p) {
+    var td = pos(p.td), type = p.type || 'vertical', kop = pos(p.kop), bur = pos(p.bur), inc = pos(p.inc), azi = parseFloat(p.azi) || 0;
+    var dropMd = pos(p.dropMd), dor = pos(p.dor), fin = pos(p.finalInc);
+    if (type !== 'vertical' && (!bur || !inc)) type = 'vertical';
+    var eob = kop + (bur ? inc / bur * 100 : 0);
+    if (type === 's' && (!dor || dropMd < eob)) type = 'j';
+    var eod = dropMd + (dor ? (inc - fin) / dor * 100 : 0);
+    function incAt(md) {
+      if (type === 'vertical' || md <= kop) return 0;
+      if (md <= eob) return (md - kop) * bur / 100;
+      if (type === 'j' || md <= dropMd) return inc;
+      if (md <= eod) return inc - (md - dropMd) * dor / 100;
+      return fin;
+    }
+    var marks = [0, td];
+    for (var m = 100; m < td; m += 100) marks.push(m);
+    [kop, eob, dropMd, eod].forEach(function (x) { if (type !== 'vertical' && x > 0 && x < td) marks.push(x); });
+    marks.sort(function (a, b) { return a - b; });
+    var out = [];
+    marks.forEach(function (md) { if (!out.length || md > out[out.length - 1].md + 1e-6) out.push({ md: md, inc: incAt(md), azi: azi }); });
+    return out;
+  }
+
+  /* ---------- Wellbore ---------- */
+  function holeAt(secs, md) {
+    var best = null;
+    for (var i = 0; i < secs.length; i++) {
+      var s = secs[i];
+      if (md >= s.top - 1e-6 && md <= s.bottom + 1e-6 && (!best || s.id < best.id)) best = s;
+    }
+    if (!best && secs.length) { best = secs[secs.length - 1]; }
+    return best;
+  }
+
+  /* ---------- String ---------- */
+  function compProps(c, fl) {
+    var od = pos(c.od), id = Math.min(pos(c.id), od * 0.98);
+    var A = PI / 4 * (od * od - id * id), I = PI / 64 * (Math.pow(od, 4) - Math.pow(id, 4));
+    var wt = pos(c.wt) || 2.67 * (od * od - id * id);
+    var wb = wt * (1 - fl.mwOut / 65.5) + 0.0408 * (fl.mwIn - fl.mwOut) * id * id;
+    var wf = c.cls === 'premium' ? 0.8 : 1, odE = id + (od - id) * wf;
+    var Ae = PI / 4 * (odE * odE - id * id), Je = PI / 32 * (Math.pow(odE, 4) - Math.pow(id, 4));
+    var ym = pos(c.yield), mp = pos(c.maxPull) * 1000, mt = pos(c.maxTorque);
+    var tens = ym ? ym * Ae : Infinity; if (mp) tens = Math.min(tens, mp);
+    function torsion(T) {
+      var q = Infinity;
+      if (ym) { var s = T / Ae; q = 0.096167 * Je / odE * Math.sqrt(Math.max(0, ym * ym - s * s)); }
+      if (mt) q = Math.min(q, mt);
+      return q;
+    }
+    return { od: od, id: id, A: A, I: I, J: 2 * I, wt: wt, wb: wb, tens: tens, torsion: torsion, rc: (pos(c.tjod) || od) / 2,
+      rated: isFinite(tens), ratedTq: !!(ym || mt), tensBy: (mp && (!ym || mp <= ym * Ae)) ? 'rating entered' : 'tube yield' };
+  }
+
+  /* comps are listed bottom-up; the last one runs to surface. Returns bottom-up spans at string depth D. */
+  function layout(comps, D) {
+    var bot = D, out = [];
+    for (var i = 0; i < comps.length && bot > 1e-9; i++) {
+      var isTop = i === comps.length - 1, len = isTop ? bot : Math.min(pos(comps[i].len), bot);
+      if (len <= 0) continue;
+      out.push({ i: i, top: bot - len, bot: bot });
+      bot -= len;
+    }
+    return out;
+  }
+
+  function discretize(m, D, extra) {
+    var spans = layout(m.comps, D), bp = [0, D], zt = null;
+    spans.forEach(function (s) { bp.push(s.top); });
+    if (m.stiff && spans.length && m.comps[spans[0].i].type !== 'dp') {
+      /* stiff zone: the BHA (everything below the first plain pipe) plus 150 ft of pipe above it */
+      var bhaTop = 0;
+      for (var z = 0; z < spans.length; z++) { if (m.comps[spans[z].i].type === 'dp') { bhaTop = spans[z].bot; break; } }
+      zt = Math.max(0, bhaTop - 150);
+      if (D - zt > 1500) { zt = D - 1500; m.zoneCapped = true; }
+      bp.push(zt);
+    }
+    m.secs.forEach(function (s) { bp.push(s.top, s.bottom); });
+    m.traj.st.forEach(function (s) { bp.push(s.md); });
+    (extra || []).forEach(function (x) { bp.push(x); });
+    bp = bp.filter(function (x) { return x >= 0 && x <= D; }).sort(function (a, b) { return a - b; });
+    var pts = [];
+    bp.forEach(function (x) { if (!pts.length || x > pts[pts.length - 1] + 0.01) pts.push(x); });
+    if (pts[pts.length - 1] < D) pts.push(D);
+    var cuts = [pts[0]];
+    for (var i = 1; i < pts.length; i++) {
+      var n = Math.max(1, Math.ceil((pts[i] - pts[i - 1]) / m.maxLen));
+      for (var k = 1; k <= n; k++) cuts.push(pts[i - 1] + (pts[i] - pts[i - 1]) * k / n);
+    }
+    var els = [], a = trajAt(m.traj, cuts[0]), si = spans.length - 1;
+    for (i = 1; i < cuts.length; i++) {
+      var b = trajAt(m.traj, cuts[i]), top = cuts[i - 1], bot = cuts[i], mid = (top + bot) / 2;
+      while (si > 0 && mid > spans[si].bot) si--;
+      var p = m.props[spans[si].i], sec = holeAt(m.secs, mid);
+      var tm = [a.t[0] + b.t[0], a.t[1] + b.t[1], a.t[2] + b.t[2]], l = Math.sqrt(dot(tm, tm)) || 1;
+      tm = [tm[0] / l, tm[1] / l, tm[2] / l];
+      var L = bot - top, clear = Math.max(0.05, ((sec ? sec.id : p.od + 1) - p.od) / 2), EI = E * p.I, w = Math.max(0, p.wb) / 12;
+      var sinI = Math.sqrt(Math.max(0, 1 - tm[2] * tm[2])), fv = Math.cbrt(EI * w * w), fi = Math.sqrt(EI * w * sinI / clear);
+      els.push({ top: top, bot: bot, L: L, t1: a.t, t2: b.t, tm: tm, wA: p.wb * (b.tvd - a.tvd), W: p.wb * L, inc: Math.acos(Math.max(-1, Math.min(1, tm[2]))) / DEG,
+        dls: b.dls, ci: spans[si].i, p: p, mu: sec ? pos(sec.mu) : 0, muSO: sec ? (pos(sec.muSO) || pos(sec.mu)) : 0, secName: sec ? sec.name : '', holeId: sec ? sec.id : 0, clear: clear, EI: EI,
+        Fs: Math.max(2 * fi, 1.94 * fv), Fh: Math.max(m.lambda * fi, 5.55 * fv) });
+      a = b;
+    }
+    if (zt != null) { for (i = 0; i < els.length; i++) if (els[i].top >= zt - 0.02) { els.zone = { i0: i, zt: els[i].top }; break; } }
+    if (els.zone) els.beam = buildBeam(m, els);
+    return els;
+  }
+
+  function sideForce(el, T) {
+    var tm = el.tm, g0 = -tm[2] * tm[0], g1 = -tm[2] * tm[1], g2 = 1 - tm[2] * tm[2];
+    var x = T * (el.t2[0] - el.t1[0]) + el.W * g0, y = T * (el.t2[1] - el.t1[1]) + el.W * g1, z = T * (el.t2[2] - el.t1[2]) + el.W * g2;
+    return Math.sqrt(x * x + y * y + z * z);
+  }
+
+  /* One element: T_up = T_low + axial weight + ax * mu * Fn(T_avg). Solved by fixed-point iteration on average tension. */
+  function solveEl(el, Tk, knownIsLow, o, idx) {
+    var mu = Math.max(0, (o.dir < 0 ? el.muSO : el.mu) * (o.kmu == null ? 1 : o.kmu) + (o.dmu || 0)), ax = o.dir || 0, tq = 0;
+    if (o.dir === 0) { ax = 0; tq = 1; }
+    else if (o.rpm > 0) { var vr = PI * 2 * el.p.rc * o.rpm / 12, va = Math.max(1e-6, o.va || 0), h = Math.sqrt(va * va + vr * vr); ax = o.dir * va / h; tq = vr / h; }
+    var other = Tk, Fn = 0, stt = 0;
+    for (var k = 0; k < 5; k++) {
+      var Ta = (Tk + other) / 2, ov = o.fnOv && o.fnOv[idx] != null; Fn = ov ? o.fnOv[idx] : sideForce(el, Ta); stt = 0;
+      if (Ta < 0) { var C = -Ta; if (C > el.Fh) { stt = 2; if (o.buckling !== false && !ov) Fn += el.clear * C * C / (4 * el.EI) * el.L * 12; } else if (C > el.Fs) stt = 1; }
+      var dF = el.wA + ax * mu * Fn;
+      other = knownIsLow ? Tk + dF : Tk - dF;
+      if (!isFinite(other) || Math.abs(other) > 2e7) { other = knownIsLow ? -2e7 : -2e7; break; }
+    }
+    return { other: other, Fn: Fn, st: stt, dM: tq * mu * Fn * el.p.rc / 12 };
+  }
+
+  /* Free string: march from the bottom (known force) up to surface. */
+  function marchUp(els, o, iFrom) {
+    var T = o.Tbot || 0, M = o.Mbot || 0, prof = [], lock = false, start = iFrom == null ? els.length - 1 : iFrom;
+    for (var i = start; i >= 0; i--) {
+      var r = solveEl(els[i], T, true, o, i);
+      if (r.other <= -2e7) lock = true;
+      prof[i] = { Tb: T, Tt: r.other, Fn: r.Fn, st: r.st, Mb: M, Mt: M + r.dM };
+      T = r.other; M += r.dM;
+    }
+    return { Ttop: T, Mtop: M, prof: prof, lock: lock };
+  }
+
+  /* Latched string: march from surface (known hook tension) down to the fish. */
+  function marchDown(els, o) {
+    var T = o.Ttop, prof = [], loss = 0;
+    for (var i = 0; i < els.length; i++) {
+      var r = solveEl(els[i], T, false, o, i);
+      prof[i] = { Tt: T, Tb: r.other, Fn: r.Fn, st: r.st, lossAbove: loss, dM: r.dM };
+      T = r.other; loss += r.dM;
+    }
+    return { Tbot: T, prof: prof, loss: loss };
+  }
+
+  /* ---------- Stiff BHA zone: Euler-Bernoulli beam inside the hole, with wall contact ----------
+     Unknowns are the lateral offsets (u1, u2) of the pipe axis from the hole axis in a parallel-transported frame.
+     Energy: bending 1/2 EI |k + u''|^2, tension 1/2 T |u'|^2, loads (T k + w g_perp) . u, wall contact by penalty beyond the radial clearance.
+     Units inside: ft, lb. */
+  function unit(v) { var l = Math.sqrt(dot(v, v)) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
+  function cross(a, b) { return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]]; }
+  function buildBeam(m, els) {
+    var i0 = els.zone.i0, n = els.length, len = els[n - 1].bot - els[i0].top, hmax = len > 1000 ? 10 : 5;
+    var s = [els[i0].top], eIdx = [];
+    for (var i = i0; i < n; i++) { var ns = Math.max(1, Math.ceil(els[i].L / hmax - 1e-9)); for (var k = 1; k <= ns; k++) { s.push(els[i].top + els[i].L * k / ns); eIdx.push(i); } }
+    var nn = s.length, t = [], e1 = [], e2 = [];
+    for (i = 0; i < nn; i++) t.push(unit(trajAt(m.traj, s[i]).t));
+    var a = Math.abs(t[0][2]) < 0.9 ? [0, 0, 1] : [1, 0, 0], d = dot(a, t[0]);
+    e1[0] = unit([a[0] - d * t[0][0], a[1] - d * t[0][1], a[2] - d * t[0][2]]); e2[0] = cross(t[0], e1[0]);
+    for (i = 1; i < nn; i++) { d = dot(e1[i - 1], t[i]); e1[i] = unit([e1[i - 1][0] - d * t[i][0], e1[i - 1][1] - d * t[i][1], e1[i - 1][2] - d * t[i][2]]); e2[i] = cross(t[i], e1[i]); }
+    var ne = nn - 1, B = { nn: nn, ne: ne, s: s, eIdx: eIdx, h: [], EI: [], w: [], k1: [], k2: [], g1: [], g2: [], cn: [], i0: i0, nEl: n, freeTop: false };
+    var ce = [];
+    for (var e = 0; e < ne; e++) {
+      var el = els[eIdx[e]], h = s[e + 1] - s[e], tm = unit([t[e][0] + t[e + 1][0], t[e][1] + t[e + 1][1], t[e][2] + t[e + 1][2]]);
+      var f1 = [e1[e][0] + e1[e + 1][0], e1[e][1] + e1[e + 1][1], e1[e][2] + e1[e + 1][2]]; d = dot(f1, tm);
+      f1 = unit([f1[0] - d * tm[0], f1[1] - d * tm[1], f1[2] - d * tm[2]]); var f2 = cross(tm, f1);
+      var kv = [(t[e + 1][0] - t[e][0]) / h, (t[e + 1][1] - t[e][1]) / h, (t[e + 1][2] - t[e][2]) / h];
+      B.h.push(h); B.EI.push(el.EI / 144); B.w.push(el.p.wb); B.k1.push(dot(kv, f1)); B.k2.push(dot(kv, f2)); B.g1.push(f1[2]); B.g2.push(f2[2]);
+      ce.push(Math.max(0.002, (el.holeId - 2 * el.p.rc) / 24));
+    }
+    for (i = 0; i < nn; i++) B.cn.push(Math.min(ce[Math.max(0, i - 1)], ce[Math.min(ne - 1, i)]));
+    return B;
+  }
+  function bandSolve(K, b, n, bw) { /* symmetric banded system, full band stored, no pivoting */
+    var W = 2 * bw + 1, i, j, k, f;
+    for (k = 0; k < n; k++) {
+      var p = K[k * W + bw]; if (!(Math.abs(p) > 1e-12)) return false;
+      var lim = Math.min(n - 1, k + bw);
+      for (i = k + 1; i <= lim; i++) {
+        f = K[i * W + (k - i + bw)] / p; if (f === 0) continue;
+        for (j = k; j <= lim; j++) K[i * W + (j - i + bw)] -= f * K[k * W + (j - k + bw)];
+        b[i] -= f * b[k];
+      }
+    }
+    for (i = n - 1; i >= 0; i--) { var sum = b[i], l2 = Math.min(n - 1, i + bw); for (j = i + 1; j <= l2; j++) sum -= K[i * W + (j - i + bw)] * b[j]; b[i] = sum / K[i * W + bw]; }
+    return true;
+  }
+  function beamSolve(B, Tel, noCompGeo) {
+    var nn = B.nn, ne = B.ne, nd = 4 * nn, bw = 7, W = 15, K = new Float64Array(nd * W), f = new Float64Array(nd), kc = 2e7, e, i, j, r, c;
+    function add(a, b, v) { K[a * W + (b - a + bw)] += v; }
+    for (e = 0; e < ne; e++) {
+      var h = B.h[e], EI = B.EI[e], T = Tel[B.eIdx[e]], Tg = noCompGeo ? Math.max(T, 0) : T, a = EI / (h * h * h), g = Tg / (30 * h);
+      var ke = [[12 * a + 36 * g, 6 * h * a + 3 * h * g, -12 * a - 36 * g, 6 * h * a + 3 * h * g], [0, 4 * h * h * a + 4 * h * h * g, -6 * h * a - 3 * h * g, 2 * h * h * a - h * h * g], [0, 0, 12 * a + 36 * g, -6 * h * a - 3 * h * g], [0, 0, 0, 4 * h * h * a + 4 * h * h * g]];
+      for (var pl = 0; pl < 2; pl++) {
+        var dof = [4 * e + 2 * pl, 4 * e + 2 * pl + 1, 4 * e + 4 + 2 * pl, 4 * e + 5 + 2 * pl], kk = pl ? B.k2[e] : B.k1[e], q = T * kk + B.w[e] * (pl ? B.g2[e] : B.g1[e]);
+        for (i = 0; i < 4; i++) for (j = 0; j < 4; j++) add(dof[i], dof[j], j >= i ? ke[i][j] : ke[j][i]);
+        f[dof[0]] += q * h / 2; f[dof[1]] += q * h * h / 12; f[dof[2]] += q * h / 2; f[dof[3]] -= q * h * h / 12;
+        if (e > 0 || B.freeTop) f[dof[1]] += EI * kk;
+        f[dof[3]] -= EI * kk;
+      }
+    }
+    for (i = 0; i < nn; i++) { add(4 * i, 4 * i, 1); add(4 * i + 2, 4 * i + 2, 1); }
+    var U = new Float64Array(nd);
+    if (B.U0 && !B.cold) U.set(B.U0); /* warm start from the previous solution on this mesh */
+    else for (i = 0; i < nn; i++) { var qx = f[4 * i], qy = f[4 * i + 2], ql = Math.sqrt(qx * qx + qy * qy); if (ql > 1e-9) { var rr = B.cn[i] + ql / kc; U[4 * i] = rr * qx / ql; U[4 * i + 2] = rr * qy / ql; } }
+    function mul(V, out) { for (var a2 = 0; a2 < nd; a2++) { var sum = 0, lo = Math.max(0, a2 - bw), hi = Math.min(nd - 1, a2 + bw); for (var b2 = lo; b2 <= hi; b2++) sum += K[a2 * W + (b2 - a2 + bw)] * V[b2]; out[a2] = sum; } }
+    function energy(V, tmp) { mul(V, tmp); var en = 0; for (var a2 = 0; a2 < nd; a2++) en += V[a2] * (0.5 * tmp[a2] - f[a2]); for (var n2 = 0; n2 < nn; n2++) { var rr2 = Math.sqrt(V[4 * n2] * V[4 * n2] + V[4 * n2 + 2] * V[4 * n2 + 2]) - B.cn[n2]; if (rr2 > 0) en += 0.5 * kc * rr2 * rr2; } return en; }
+    var Rv = new Float64Array(nd), tmp = new Float64Array(nd), Kt = new Float64Array(nd * W), Ut = new Float64Array(nd), ok = false, E0 = energy(U, tmp);
+    for (var it = 0; it < 80; it++) {
+      mul(U, Rv); Kt.set(K);
+      for (i = 0; i < nd; i++) Rv[i] = f[i] - Rv[i];
+      for (i = 0; i < nn; i++) {
+        var u1 = U[4 * i], u2 = U[4 * i + 2]; r = Math.sqrt(u1 * u1 + u2 * u2); c = B.cn[i];
+        if (r > c) {
+          var n1 = u1 / r, n2b = u2 / r, pen = kc * (r - c), ta = kc, tb = kc * (1 - c / r), W1 = 4 * i, W2 = 4 * i + 2;
+          Rv[W1] -= pen * n1; Rv[W2] -= pen * n2b;
+          Kt[W1 * W + bw] += ta * n1 * n1 + tb * n2b * n2b; Kt[W2 * W + bw] += ta * n2b * n2b + tb * n1 * n1;
+          Kt[W1 * W + (2 + bw)] += (ta - tb) * n1 * n2b; Kt[W2 * W + (-2 + bw)] += (ta - tb) * n1 * n2b;
+        }
+      }
+      if (!bandSolve(Kt, Rv, nd, bw)) return null;
+      var al = 1, E1 = 0, mx = 0;
+      for (var ls = 0; ls < 8; ls++) { for (i = 0; i < nd; i++) Ut[i] = U[i] + al * Rv[i]; E1 = energy(Ut, tmp); if (E1 <= E0 + 1e-9 * Math.abs(E0) + 1e-9) break; al /= 2; }
+      for (i = 0; i < nn; i++) mx = Math.max(mx, Math.abs(al * Rv[4 * i]), Math.abs(al * Rv[4 * i + 2]));
+      U.set(Ut); E0 = E1;
+      if (!isFinite(E0)) return null;
+      if (mx < 2e-8) { ok = true; break; }
+    }
+    if (!ok) { if (B.U0 && !B.cold) { B.cold = true; var again = beamSolve(B, Tel, noCompGeo); B.cold = false; return again; } return null; }
+    B.U0 = U; B.iters = (B.iters || 0) + it + 1; B.solves = (B.solves || 0) + 1;
+    var F = [], Mx = [], Nn = [], tot = 0;
+    for (i = 0; i < B.nEl; i++) { F.push(i >= B.i0 ? 0 : null); Mx.push(0); }
+    for (i = 0; i < nn; i++) {
+      r = Math.sqrt(U[4 * i] * U[4 * i] + U[4 * i + 2] * U[4 * i + 2]); var N = r > B.cn[i] ? kc * (r - B.cn[i]) : 0; Nn.push(N); tot += N;
+      var ea = B.eIdx[Math.max(0, i - 1)], eb = B.eIdx[Math.min(ne - 1, i)];
+      F[ea] += N / 2; F[eb] += N / 2;
+    }
+    for (e = 0; e < ne; e++) {
+      var hh = B.h[e], m2 = 0;
+      for (var end = 0; end < 2; end++) {
+        var c1 = 0, c2 = 0;
+        for (pl = 0; pl < 2; pl++) {
+          var ua = U[4 * e + 2 * pl], tha = U[4 * e + 2 * pl + 1], ub = U[4 * e + 4 + 2 * pl], thb = U[4 * e + 5 + 2 * pl];
+          var d2 = end === 0 ? (-6 * ua - 4 * hh * tha + 6 * ub - 2 * hh * thb) / (hh * hh) : (6 * ua + 2 * hh * tha - 6 * ub + 4 * hh * thb) / (hh * hh);
+          if (pl) c2 = B.k2[e] + d2; else c1 = B.k1[e] + d2;
+        }
+        m2 = Math.max(m2, B.EI[e] * Math.sqrt(c1 * c1 + c2 * c2));
+      }
+      Mx[B.eIdx[e]] = Math.max(Mx[B.eIdx[e]], m2);
+    }
+    return { F: F, M: Mx, N: Nn, total: tot, U: U };
+  }
+  function stiffRun(els, base, fn, start, Tfill) {
+    /* fn(fnOv) runs the march; tension in the stiff zone and beam contact forces are iterated twice */
+    var r = base;
+    for (var pass = 0; pass < 2; pass++) {
+      var Tel = [];
+      for (var i = 0; i < els.length; i++) Tel.push(i <= start && r.prof[i] ? (r.prof[i].Tt + r.prof[i].Tb) / 2 : Tfill);
+      var b = beamSolve(els.beam, Tel, false) || beamSolve(els.beam, Tel, true);
+      if (!b) { base.stiffFail = true; return base; }
+      r = fn(b.F); r.beam = b;
+    }
+    return r;
+  }
+  function MU(els, o, iFrom) {
+    var base = marchUp(els, o, iFrom);
+    if (!els.zone || o.soft || o.fnOv) return base;
+    return stiffRun(els, base, function (ov) { var o2 = {}; for (var k in o) o2[k] = o[k]; o2.fnOv = ov; return marchUp(els, o2, iFrom); }, iFrom == null ? els.length - 1 : iFrom, o.Tbot || 0);
+  }
+  function MD(els, o) {
+    var base = marchDown(els, o);
+    if (!els.zone || o.soft || o.fnOv) return base;
+    return stiffRun(els, base, function (ov) { var o2 = {}; for (var k in o) o2[k] = o[k]; o2.fnOv = ov; return marchDown(els, o2); }, els.length - 1, 0);
+  }
+
+  function stretchIn(els, prof) { var s = 0; for (var i = 0; i < els.length; i++) s += (prof[i].Tt + prof[i].Tb) / 2 * els[i].L * 12 / (E * els[i].p.A); return s; }
+  function idxAtTop(els, md) { for (var i = 0; i < els.length; i++) if (Math.abs(els[i].top - md) < 0.02) return i; return -1; }
+
+  /* ---------- Full case ---------- */
+  function run(c) {
+    var W = [], R = { warnings: W };
+    var op = c.op || {}, set = c.settings || {}, rig = c.rig || {};
+    var fl = { mwOut: pos(c.fluid.mwOut), mwIn: pos(c.fluid.mwIn) || pos(c.fluid.mwOut) };
+    var useSurvey = c.traj.mode === 'survey' && (c.traj.survey || []).filter(function (r) { return isFinite(parseFloat(r.md)) && isFinite(parseFloat(r.inc)); }).length >= 2;
+    var traj = buildTraj(useSurvey ? c.traj.survey : profileStations(c.traj.profile || {}));
+    R.traj = traj; R.trajSource = useSurvey ? 'survey' : 'profile';
+    if (!useSurvey) W.push({ lvl: 'warn', msg: 'No survey entered. Results use a planned ' + ({ vertical: 'vertical', j: 'build-and-hold', s: 'build-hold-drop' }[(c.traj.profile || {}).type] || 'vertical') + ' profile; real doglegs and tortuosity are not represented, so drag and torque are likely under-predicted.' });
+    var secsRaw = c.secs || [];
+    var secs = secsRaw.map(function (s) { return { name: s.name || 'Section', top: pos(s.top), bottom: pos(s.bottom), id: pos(s.id), mu: pos(s.mu), muSO: pos(s.muSO), cased: s.cased !== false && s.cased !== 'open' }; })
+      .filter(function (s) { return s.bottom > s.top && s.id > 0; });
+    var comps = (c.comps || []).filter(function (x) { return pos(x.od) > 0; });
+    var D = pos(op.depth);
+    if (!secs.length) { R.error = 'Add at least one wellbore section (casing or open hole).'; return R; }
+    if (!comps.length) { R.error = 'Add at least one string component.'; return R; }
+    if (!D) { R.error = 'Enter the string depth (bottom of string, ft MD).'; return R; }
+    if (!fl.mwOut) W.push({ lvl: 'warn', msg: 'Fluid density is zero: the string is calculated as if hanging in air.' });
+    var deepest = Math.max.apply(null, secs.map(function (s) { return s.bottom; }));
+    if (D > deepest + 0.5) W.push({ lvl: 'warn', msg: 'String depth ' + Math.round(D) + ' ft is below the deepest wellbore section (' + Math.round(deepest) + ' ft). The last section is extended.' });
+    if (D > traj.td + 0.5) W.push({ lvl: 'warn', msg: 'String depth is below the last survey station (' + Math.round(traj.td) + ' ft). The well path is extended in a straight line.' });
+    var props = comps.map(function (x) { return compProps(x, fl); });
+    /* input checks */
+    secsRaw.forEach(function (s, i) { if ((pos(s.bottom) || pos(s.id)) && !(pos(s.bottom) > pos(s.top) && pos(s.id) > 0)) W.push({ lvl: 'warn', code: 'sec-incomplete', msg: 'Wellbore section ' + (i + 1) + ' (' + (s.name || 'no name') + ') is incomplete and was skipped: it needs a bottom deeper than its top and an ID.' }); });
+    (function () { var ss = secs.slice().sort(function (a, b) { return a.top - b.top; }), reach = 0;
+      ss.forEach(function (s) { if (s.top > reach + 1 && reach < D) W.push({ lvl: 'warn', code: 'sec-gap', msg: 'No wellbore section covers ' + Math.round(reach) + ' to ' + Math.round(s.top) + ' ft. The nearest section is used there.' }); reach = Math.max(reach, s.bottom); }); })();
+    secs.forEach(function (s) { [['friction factor', s.mu], ['slack-off friction factor', s.muSO]].forEach(function (f) { if (f[1] && (f[1] < 0.05 || f[1] > 0.6)) W.push({ lvl: 'warn', code: 'ff-range', msg: s.name + ': ' + f[0] + ' ' + f[1] + ' is outside the usual 0.05 to 0.6 range.' }); }); if (!s.mu) W.push({ lvl: 'warn', code: 'ff-zero', msg: s.name + ': friction factor is zero, so no drag or torque is calculated there.' }); });
+    comps.forEach(function (x, i) {
+      var nm = x.name || ('Item ' + (i + 1));
+      if (pos(x.id) >= pos(x.od)) W.push({ lvl: 'bad', code: 'comp-id', msg: nm + ': ID (' + pos(x.id) + ' in.) must be smaller than OD (' + pos(x.od) + ' in.).' });
+      if (i < comps.length - 1 && !pos(x.len)) W.push({ lvl: 'warn', code: 'comp-len', msg: nm + ': no length entered, so it is left out of the string.' });
+    });
+    if (useSurvey) {
+      var bad = (c.traj.survey || []).filter(function (r) { var a = parseFloat(r.inc), z = parseFloat(r.azi); return a < 0 || a > 180 || (isFinite(z) && (z < 0 || z > 360)); });
+      if (bad.length) W.push({ lvl: 'bad', code: 'svy-range', msg: bad.length + ' survey station(s) have inclination outside 0 to 180 deg or azimuth outside 0 to 360 deg. Check the survey.' });
+      var spikes = traj.st.filter(function (s) { return s.dls > 15; });
+      if (spikes.length) W.push({ lvl: 'warn', code: 'svy-dls', msg: 'Very high dogleg (over 15 deg/100 ft) at ' + spikes.slice(0, 3).map(function (s) { return Math.round(s.md) + ' ft'; }).join(', ') + '. Check these survey stations; a bad station adds false drag.' });
+    }
+    var m = { traj: traj, secs: secs, comps: comps, props: props, maxLen: Math.max(5, pos(set.elLen) || 30), lambda: pos(set.lambda) || 2.83, stiff: set.stiff !== 'off' };
+    var block = pos(rig.block) * 1000, sens = pos(set.sens), dfT = pos(set.dfTension) || 1.1, dfQ = pos(set.dfTorsion) || 1.0;
+    var spans = layout(comps, D);
+    R.spans = spans; R.props = props; R.comps = comps; R.D = D; R.block = block; R.secs = secs;
+    var botAt = trajAt(traj, D); R.bottom = botAt;
+    var jarSpan = null; spans.forEach(function (s) { if (!jarSpan && comps[s.i].type === 'jar') jarSpan = s; });
+    var boDepth = pos(op.backoffDepth); if (boDepth >= D) boDepth = 0;
+    var els = discretize(m, D, boDepth ? [boDepth] : []);
+    R.els = els;
+
+    function hl(T) { return T + block; }
+    var pu = MU(els, { dir: 1 }), so = MU(els, { dir: -1 }), rob = MU(els, { dir: 0 });
+    var puS = marchUp(els, { dir: 1 }), soS = marchUp(els, { dir: -1 }), robS = marchUp(els, { dir: 0 });
+    R.stiff = { on: !!els.zone && !pu.stiffFail && !rob.stiffFail, zoneTop: els.zone ? els.zone.zt : null, failed: !!(els.zone && (pu.stiffFail || so.stiffFail || rob.stiffFail)),
+      addPU: pu.Ttop - puS.Ttop, addSO: so.Ttop - soS.Ttop, addTq: rob.Mtop - robS.Mtop, capped: !!m.zoneCapped };
+    if (R.stiff.failed) W.push({ lvl: 'warn', msg: 'The BHA beam model did not converge for this case, so the soft-string result is shown for the BHA.' });
+    if (m.zoneCapped) W.push({ lvl: 'warn', msg: 'The BHA is longer than 1,500 ft. Stiffness is modelled for the bottom 1,500 ft only.' });
+    R.pu = pu; R.so = so; R.rob = rob;
+    R.hlPU = hl(pu.Ttop); R.hlSO = hl(so.Ttop); R.hlROB = hl(rob.Ttop); R.tqROB = rob.Mtop;
+    R.stringWeightAir = 0; spans.forEach(function (s) { R.stringWeightAir += props[s.i].wt * (s.bot - s.top); });
+    var ovP = pu.beam ? pu.beam.F : null, ovS = so.beam ? so.beam.F : null, ovR = rob.beam ? rob.beam.F : null;
+    R.hlPUlo = hl(MU(els, { dir: 1, dmu: -sens, fnOv: ovP }).Ttop); R.hlPUhi = hl(MU(els, { dir: 1, dmu: sens, fnOv: ovP }).Ttop);
+    R.hlSOlo = hl(MU(els, { dir: -1, dmu: -sens, fnOv: ovS }).Ttop); R.hlSOhi = hl(MU(els, { dir: -1, dmu: sens, fnOv: ovS }).Ttop);
+    R.tqROBlo = MU(els, { dir: 0, dmu: -sens, fnOv: ovR }).Mtop; R.tqROBhi = MU(els, { dir: 0, dmu: sens, fnOv: ovR }).Mtop;
+    R.stretchPU = stretchIn(els, pu.prof);
+    if (so.lock) W.push({ lvl: 'bad', msg: 'Slack-off calculation locks up: the string cannot slide to this depth with the entered friction factors.' });
+
+    /* combined rotation + axial movement */
+    var rpm = pos(op.rpm), va = pos(op.speed);
+    if (rpm && va) {
+      var pr = MU(els, { dir: 1, rpm: rpm, va: va }), sr = MU(els, { dir: -1, rpm: rpm, va: va });
+      R.comb = { hlPU: hl(pr.Ttop), tqPU: pr.Mtop, hlSO: hl(sr.Ttop), tqSO: sr.Mtop, rpm: rpm, va: va };
+    }
+    /* rotating on bottom: milling or washover */
+    (function () {
+      var wob = pos(op.wob) * 1000, bp = props[spans[0].i], bc = comps[spans[0].i];
+      var cid = parseFloat(op.cutID), cutOD = pos(op.cutOD) || bp.od, cutID = isFinite(cid) && cid >= 0 ? cid : ((bc.type === 'mill' && bp.id < 0.5 * bp.od) ? 0 : bp.id);
+      if (cutID >= cutOD) cutID = 0;
+      var Ro = cutOD / 2, Ri = cutID / 2, rEff = 2 / 3 * (Ro * Ro * Ro - Ri * Ri * Ri) / (Ro * Ro - Ri * Ri), muCut = pos(op.muCut) || 0.3;
+      var est = op.tobMode === 'est', tob = est ? muCut * wob * rEff / 12 : pos(op.tob);
+      if (!(wob || tob)) return;
+      var ob = MU(els, { dir: 0, Tbot: -wob, Mbot: tob }), n = els.length, i;
+      var M = { wob: wob, tob: tob, est: est, muCut: muCut, cutOD: cutOD, cutID: cutID, rEff: rEff, hl: hl(ob.Ttop), tq: ob.Mtop, prof: ob.prof, tool: bc.name,
+        muImplied: !est && wob && tob ? tob * 12 / (wob * rEff) : null, frictionTq: ob.Mtop - tob };
+      /* neutral point */
+      M.neutral = null;
+      if (wob) {
+        for (i = n - 1; i >= 0; i--) { var p = ob.prof[i]; if (p.Tb < 0 && p.Tt >= 0) { M.neutral = { depth: els[i].bot - els[i].L * (-p.Tb) / (p.Tt - p.Tb), name: comps[els[i].ci].name, type: comps[els[i].ci].type }; break; } }
+        if (!M.neutral && ob.Ttop < 0) M.neutral = { depth: 0, name: 'surface', type: 'none' };
+      }
+      /* buckling for this weight, and the weight at which buckling starts (rotating, so no axial friction) */
+      var worst = 0, from = null, to = null, Wb = 0, wSin = Infinity, wHel = Infinity, atS = 0, atH = 0;
+      for (i = n - 1; i >= 0; i--) {
+        if (ob.prof[i].st) { worst = Math.max(worst, ob.prof[i].st); if (to == null) to = els[i].bot; from = els[i].top; }
+        var cs = els[i].Fs + Wb + els[i].wA / 2, ch = els[i].Fh + Wb + els[i].wA / 2;
+        if (cs < wSin) { wSin = cs; atS = els[i].top; } if (ch < wHel) { wHel = ch; atH = els[i].top; }
+        Wb += els[i].wA;
+      }
+      M.buck = worst; M.buckFrom = from; M.buckTo = to; M.wobSin = wSin; M.wobSinAt = atS; M.sinItem = comps[els[idxAtTop(els, atS) < 0 ? n - 1 : idxAtTop(els, atS)].ci].name; M.wobHel = wHel; M.wobHelAt = atH;
+      /* torque against string and rig limits */
+      var minM = Infinity, lim = null, unr = false, turns = 0;
+      els.forEach(function (el, k) {
+        var pf = ob.prof[k]; turns += (pf.Mt + pf.Mb) / 2 * el.L * 144 / (G * el.p.J);
+        if (!el.p.ratedTq) { unr = true; return; }
+        var mg = el.p.torsion(Math.max(pf.Tt, 0)) / dfQ - pf.Mt;
+        if (mg < minM) { minM = mg; lim = comps[el.ci].name + ' at ' + Math.round(el.top) + ' ft'; }
+      });
+      var rigQ = pos(rig.maxTorque); if (rigQ && rigQ - ob.Mtop < minM) { minM = rigQ - ob.Mtop; lim = 'Rig torque limit'; }
+      M.tqMargin = isFinite(minM) ? minM : null; M.tqLimitedBy = lim; M.tqUnrated = unr; M.turns = turns / (2 * PI);
+      /* weights and torque across the interval to be milled or washed over */
+      var Lm = pos(op.millLen), rows = [], steps = Lm ? 10 : 0;
+      for (var k2 = 0; k2 <= steps; k2++) {
+        var d = D + (steps ? Lm * k2 / steps : 0), e2 = k2 === 0 ? els : discretize(m, d);
+        var on = k2 === 0 ? ob : MU(e2, { dir: 0, Tbot: -wob, Mbot: tob }), off = k2 === 0 ? rob : MU(e2, { dir: 0 });
+        rows.push({ d: d, hlOn: hl(on.Ttop), tqOn: on.Mtop, hlOff: hl(off.Ttop), tqOff: off.Mtop });
+      }
+      M.sweep = rows; M.len = Lm;
+      R.mill = M;
+      if (M.hl <= block) W.push({ lvl: 'bad', msg: 'The string is not heavy enough to put ' + Math.round(wob / 1000) + ' klbs on the mill or shoe.' });
+      if (M.tqMargin != null && M.tqMargin < 0) W.push({ lvl: 'bad', msg: 'Milling torque exceeds the allowable torque (' + lim + ').' });
+      if (worst === 2) W.push({ lvl: 'bad', msg: 'Helical buckling predicted while milling with this weight, between ' + Math.round(from) + ' and ' + Math.round(to) + ' ft.' });
+      else if (worst === 1) W.push({ lvl: 'warn', msg: 'Sinusoidal buckling predicted while milling with this weight, between ' + Math.round(from) + ' and ' + Math.round(to) + ' ft.' });
+      if (M.neutral && M.neutral.type === 'dp') W.push({ lvl: 'warn', msg: 'With this weight the neutral point is in the work string at ' + Math.round(M.neutral.depth) + ' ft, above the BHA. The pipe below it is in compression.' });
+    })();
+
+    /* washover fit: clearances, swallow length, rigid-pass length */
+    (function () {
+      var fishOD = pos(op.fishOD), wp = spans.filter(function (s) { return comps[s.i].type === 'washpipe'; }), Lm = pos(op.millLen);
+      if (!wp.length) { if (fishOD) R.wash = { none: true, fishOD: fishOD }; return; }
+      var wpLen = 0, wpID = Infinity, wpOD = 0, wpTop = Infinity, minID = Infinity, minItem = '';
+      wp.forEach(function (s) { wpLen += s.bot - s.top; wpID = Math.min(wpID, props[s.i].id); wpOD = Math.max(wpOD, props[s.i].od); wpTop = Math.min(wpTop, s.top); });
+      spans.forEach(function (s) { if (s.top >= wpTop - 0.02 && props[s.i].id < minID) { minID = props[s.i].id; minItem = comps[s.i].name; } });
+      var holeMin = Infinity, maxDls = 0;
+      els.forEach(function (el) { if (el.top >= wpTop - 0.02) { holeMin = Math.min(holeMin, el.holeId || Infinity); maxDls = Math.max(maxDls, el.dls); } });
+      for (var k = 1; k <= 10 && Lm; k++) { var d = D + Lm * k / 10, sec = holeAt(secs, d); if (sec) holeMin = Math.min(holeMin, sec.id); maxDls = Math.max(maxDls, trajAt(traj, d).dls); }
+      var kap = maxDls * DEG / 100, F = { fishOD: fishOD, wpLen: wpLen, wpID: wpID, wpOD: wpOD, minID: minID, minItem: minItem, hole: holeMin, maxDls: maxDls, len: Lm,
+        odClear: holeMin - wpOD, idClear: fishOD ? minID - fishOD : null };
+      F.rigidOuter = kap > 0 && F.odClear > 0 ? Math.sqrt(8 * F.odClear / 12 / kap) : null;
+      F.rigidInner = kap > 0 && fishOD && F.idClear > 0 ? Math.sqrt(8 * F.idClear / 12 / kap) : null;
+      R.wash = F;
+      if (fishOD && F.idClear <= 0) W.push({ lvl: 'bad', msg: 'The fish (' + fishOD + ' in. OD) will not enter ' + minItem + ' (' + minID + ' in. ID).' });
+      else if (fishOD && F.idClear < 0.25) W.push({ lvl: 'warn', msg: 'Clearance between fish and washover ID is ' + F.idClear.toFixed(3) + ' in., below the 1/4 in. usually preferred.' });
+      if (F.odClear > 0 && F.odClear < 0.25) W.push({ lvl: 'warn', msg: 'Clearance between washover pipe and hole is ' + F.odClear.toFixed(3) + ' in., below the 1/4 in. minimum used in hard formation (1/2 in. preferred).' });
+      if (Lm && Lm > wpLen + 0.5) W.push({ lvl: 'warn', msg: 'Planned washover interval (' + Math.round(Lm) + ' ft) is longer than the washover pipe (' + Math.round(wpLen) + ' ft).' });
+    })();
+
+    /* buckling while slacking off (free string) */
+    (function () {
+      var worst = 0, from = null, to = null, minMargin = Infinity, at = 0;
+      els.forEach(function (el, i) {
+        var p = so.prof[i], C = -Math.min(p.Tt, p.Tb);
+        if (p.st) { worst = Math.max(worst, p.st); if (from == null) from = el.top; to = el.bot; }
+        if (el.Fs - C < minMargin) { minMargin = el.Fs - C; at = el.top; }
+      });
+      R.buckSO = { worst: worst, from: from, to: to, minMargin: minMargin, at: at };
+      if (worst === 2) W.push({ lvl: 'bad', msg: 'Helical buckling predicted while slacking off between ' + Math.round(from) + ' and ' + Math.round(to) + ' ft.' });
+      else if (worst === 1) W.push({ lvl: 'warn', msg: 'Sinusoidal buckling predicted while slacking off between ' + Math.round(from) + ' and ' + Math.round(to) + ' ft.' });
+    })();
+
+    /* broomstick: weights as the string is run in */
+    (function () {
+      var N = 24, rows = [];
+      for (var k = 1; k <= N; k++) {
+        var d = D * k / N, e2 = k === N ? els : discretize(m, d);
+        var rb = k === N ? rob : MU(e2, { dir: 0 }), ov = rb.beam ? rb.beam.F : null;
+        /* off-bottom tension in the BHA is small in every mode, so the rotating contact forces are reused */
+        var row = { d: d, pu: hl(k === N ? pu.Ttop : MU(e2, { dir: 1, fnOv: ov }).Ttop), so: hl(k === N ? so.Ttop : MU(e2, { dir: -1, fnOv: ov }).Ttop) };
+        row.rob = hl(rb.Ttop); row.tq = rb.Mtop;
+        if (sens) {
+          row.puLo = hl(MU(e2, { dir: 1, dmu: -sens, fnOv: ov }).Ttop); row.puHi = hl(MU(e2, { dir: 1, dmu: sens, fnOv: ov }).Ttop);
+          row.soLo = hl(MU(e2, { dir: -1, dmu: -sens, fnOv: ov }).Ttop); row.soHi = hl(MU(e2, { dir: -1, dmu: sens, fnOv: ov }).Ttop);
+        }
+        rows.push(row);
+      }
+      R.broom = rows;
+    })();
+
+    /* tension limits: maximum surface pull with the string latched */
+    (function () {
+      var best = Infinity, lim = null, unrated = [];
+      spans.forEach(function (s) {
+        var p = props[s.i];
+        if (!p.rated) { unrated.push(comps[s.i].name || ('Item ' + (s.i + 1))); return; }
+        var i = idxAtTop(els, s.top); if (i < 0) return;
+        var cap = p.tens / dfT, h = i === 0 ? cap : MU(els, { dir: 1, Tbot: cap }, i - 1).Ttop;
+        if (h < best) { best = h; lim = { i: s.i, name: comps[s.i].name, cap: cap, at: s.top, by: p.tensBy }; }
+      });
+      var maxHL = hl(best), rigLim = pos(rig.maxHook) * 1000, limitedBy = lim ? (lim.name + ' at ' + Math.round(lim.at) + ' ft (' + lim.by + ')') : null;
+      if (rigLim && rigLim < maxHL) { maxHL = rigLim; limitedBy = 'Rig hoisting limit'; }
+      R.maxPull = { hl: isFinite(maxHL) ? maxHL : null, limitedBy: limitedBy, mop: isFinite(maxHL) ? maxHL - R.hlPU : null, unrated: unrated };
+      if (unrated.length) W.push({ lvl: 'warn', msg: 'No pull rating entered for: ' + unrated.join(', ') + '. These items are not included in the maximum-pull check.' });
+      if (isFinite(maxHL) && maxHL < R.hlPU) W.push({ lvl: 'bad', msg: 'Pick-up weight already exceeds the allowable pull (' + limitedBy + ').' });
+    })();
+
+    /* overpull and set-down transmission to the fish */
+    (function () {
+      var jarI = jarSpan ? idxAtTop(els, jarSpan.top) : -1;
+      var opPlan = pos(op.overpull) * 1000, sdPlan = pos(op.setdown) * 1000;
+      var opMax = Math.max(opPlan * 1.25, R.maxPull.mop && R.maxPull.mop > 0 ? R.maxPull.mop : 0, 50000), rows = [], n = 12;
+      function pullAt(x) { var r = MD(els, { dir: 1, Ttop: pu.Ttop + x }); return { x: x, fish: r.Tbot, jar: jarI >= 0 ? r.prof[jarI].Tt : null, stretch: stretchIn(els, r.prof) - R.stretchPU }; }
+      for (var k = 0; k <= n; k++) rows.push(pullAt(opMax * k / n));
+      R.pullTrans = rows;
+      if (opPlan) { R.pullPlan = pullAt(opPlan); R.pullPlan.hl = R.hlPU + opPlan; R.pullPlan.eff = R.pullPlan.fish / opPlan; }
+      var sdMax = Math.max(sdPlan * 1.5, 40000), rows2 = [];
+      function downAt(x) {
+        var r = MD(els, { dir: -1, Ttop: so.Ttop - x }), st = 0, where = null;
+        r.prof.forEach(function (p, i) { if (p.st > st) { st = p.st; where = els[i].top; } });
+        return { x: x, fish: -r.Tbot, jar: jarI >= 0 ? -r.prof[jarI].Tt : null, st: st, where: where };
+      }
+      for (k = 0; k <= n; k++) rows2.push(downAt(sdMax * k / n));
+      R.downTrans = rows2;
+      if (sdPlan) { R.downPlan = downAt(sdPlan); R.downPlan.hl = R.hlSO - sdPlan; R.downPlan.eff = R.downPlan.fish / sdPlan; }
+      /* jar trip readings */
+      if (jarSpan && jarI >= 0) {
+        var up = pos(op.jarUp) * 1000, dn = pos(op.jarDown) * 1000, po = pos(op.pumpOpen) * 1000;
+        var above = jarI > 0 ? jarI - 1 : null, J = { name: comps[jarSpan.i].name, top: jarSpan.top, inc: trajAt(traj, jarSpan.top).inc };
+        function hookFor(T, dir) { return hl(above == null ? T : MU(els, { dir: dir, Tbot: T }, above).Ttop); }
+        J.puAbove = hookFor(0, 1); J.soAbove = hookFor(0, -1); J.robAbove = hookFor(0, 0);
+        if (up) { J.up = hookFor(Math.max(0, up - po), 1); J.upSet = up; }
+        if (dn) { J.down = hookFor(-(dn + po), -1); J.downSet = dn; }
+        J.po = po;
+        R.jar = J;
+        if (J.up && R.maxPull.hl && J.up > R.maxPull.hl) W.push({ lvl: 'bad', msg: 'The up-jar trip reading exceeds the maximum allowable surface pull.' });
+        if (J.down != null && J.down < block) W.push({ lvl: 'bad', msg: 'Not enough string weight above the jar to reach the down-jar setting.' });
+      }
+    })();
+
+    /* torque to the fish, twist, torsional limits (string latched, neutral weight, rotating) */
+    (function () {
+      var r = MD(els, { dir: 0, Ttop: rob.Ttop }), loss = r.loss, cap = Infinity, lim = null, unr = false;
+      els.forEach(function (el, i) {
+        if (!el.p.ratedTq) { unr = true; return; }
+        var q = el.p.torsion(Math.max(r.prof[i].Tt, 0)) / dfQ + r.prof[i].lossAbove;
+        if (q < cap) { cap = q; lim = comps[el.ci].name + ' at ' + Math.round(el.top) + ' ft'; }
+      });
+      var rigQ = pos(rig.maxTorque); if (rigQ && rigQ < cap) { cap = rigQ; lim = 'Rig torque limit'; }
+      function turns(Msurf) { var t = 0; els.forEach(function (el, i) { var M = Math.max(0, Msurf - r.prof[i].lossAbove - r.prof[i].dM / 2); t += M * el.L * 144 / (G * el.p.J); }); return t / (2 * PI); }
+      var T = { loss: loss, maxSurf: isFinite(cap) ? cap : null, limitedBy: lim, maxAtFish: isFinite(cap) ? Math.max(0, cap - loss) : null, unrated: unr };
+      if (T.maxSurf != null) T.turnsMax = turns(T.maxSurf);
+      var tgt = pos(op.torqueAtFish);
+      if (tgt) { T.target = tgt; T.surf = tgt + loss; T.turns = turns(T.surf); T.over = T.maxSurf != null && T.surf > T.maxSurf; if (T.over) W.push({ lvl: 'bad', msg: 'Surface torque needed for the target torque at the fish exceeds the allowable torque (' + lim + ').' }); }
+      R.torque = T;
+    })();
+
+    /* back-off neutral point */
+    if (boDepth) {
+      var bi = idxAtTop(els, boDepth);
+      if (bi > 0) R.backoff = { depth: boDepth, neutral: hl(MU(els, { dir: 0 }, bi - 1).Ttop), fromPU: hl(MU(els, { dir: 1 }, bi - 1).Ttop), fromSO: hl(MU(els, { dir: -1 }, bi - 1).Ttop) };
+    }
+
+    /* stuck point from a stretch test */
+    (function () {
+      var h1 = pos(op.stretchHL1) * 1000, h2 = pos(op.stretchHL2) * 1000, de = pos(op.stretchIn);
+      if (!(h1 && h2 && de) || h2 <= h1) return;
+      var a = MD(els, { dir: 1, Ttop: h1 - block }), b = MD(els, { dir: 1, Ttop: h2 - block }), cum = 0, depth = null;
+      for (var i = 0; i < els.length; i++) {
+        var dT = ((b.prof[i].Tt + b.prof[i].Tb) - (a.prof[i].Tt + a.prof[i].Tb)) / 2;
+        var ds = Math.max(0, dT) * els[i].L * 12 / (E * els[i].p.A);
+        if (cum + ds >= de && ds > 0) { depth = els[i].top + els[i].L * (de - cum) / ds; break; }
+        cum += ds;
+      }
+      var topP = props[spans[spans.length - 1].i];
+      R.stuck = { model: depth, beyond: depth == null, handbook: de * E * topP.A / (12 * (h2 - h1)), maxStretch: cum, dF: h2 - h1, de: de };
+    })();
+
+    /* friction calibration from measured weights at this depth */
+    (function () {
+      var mp = pos(op.measPU) * 1000, ms = pos(op.measSO) * 1000, mr = pos(op.measROB) * 1000;
+      if (!(mp || ms || mr)) return;
+      function solve(dir, target) {
+        function f(k) { return hl(MU(els, { dir: dir, kmu: k, fnOv: dir > 0 ? ovP : ovS }).Ttop) - target; }
+        var lo = 0, hi = 4, flo = f(lo), fhi = f(hi);
+        if (flo * fhi > 0) return null;
+        for (var i = 0; i < 40; i++) { var mid = (lo + hi) / 2, fm = f(mid); if (fm * flo <= 0) hi = mid; else { lo = mid; flo = fm; } }
+        return (lo + hi) / 2;
+      }
+      R.cal = { measPU: mp, measSO: ms, measROB: mr, kPU: mp ? solve(1, mp) : null, kSO: ms ? solve(-1, ms) : null, robDiff: mr ? mr - R.hlROB : null, puDiff: mp ? mp - R.hlPU : null, soDiff: ms ? ms - R.hlSO : null };
+    })();
+
+    /* stiff BHA checks and weight placement per component */
+    (function () {
+      var rows = [], topP = props[spans[spans.length - 1].i];
+      spans.forEach(function (s) {
+        var cmp = comps[s.i], p = props[s.i], maxDls = 0, minHole = Infinity, wAx = 0, wN = 0, fr = 0, incLo = 999, incHi = 0, sfSoft = 0, sfBeam = 0, mBeam = 0, inZone = false, dlsOut = 0;
+        els.forEach(function (el, i) {
+          if (el.ci !== s.i) return;
+          maxDls = Math.max(maxDls, el.dls); minHole = Math.min(minHole, el.holeId || Infinity);
+          wAx += el.wA; var g = el.W * Math.sqrt(Math.max(0, 1 - el.tm[2] * el.tm[2])); wN += g; fr += el.mu * g;
+          incLo = Math.min(incLo, el.inc); incHi = Math.max(incHi, el.inc);
+          sfSoft += robS.prof[i].Fn; sfBeam += rob.prof[i].Fn; if (R.stiff.on && rob.beam && i >= els.zone.i0) { inZone = true; mBeam = Math.max(mBeam, rob.beam.M[i]); } else dlsOut = Math.max(dlsOut, el.dls);
+        });
+        var len = s.bot - s.top, stiffType = cmp.type !== 'dp', rigidLen = (cmp.type === 'dc' || cmp.type === 'hwdp' || cmp.type === 'dp') ? Math.min(len, 31) : len;
+        var c = (minHole - p.od) / 12, rigidDls = c > 0 ? 5729.578 * 8 * c / (rigidLen * rigidLen) : 0;
+        var row = { i: s.i, name: cmp.name, type: cmp.type, top: s.top, bot: s.bot, len: len, incLo: incLo, incHi: incHi, maxDls: maxDls, hole: minHole, clear: minHole - p.od,
+          bend: inZone ? Math.max(mBeam * 12 * (p.od / 2) / p.I, 218.166 * p.od * dlsOut) : 218.166 * p.od * maxDls, beam: inZone, sfSoft: sfSoft, sfBeam: inZone ? sfBeam : null, rigidDls: rigidDls, stiffRatio: p.I / topP.I, wAx: wAx, wN: wN, usable: wAx - fr, flag: 'ok', note: '' };
+        if (isFinite(minHole) && p.od >= minHole) { row.flag = 'bad'; row.note = 'OD is not smaller than the hole ID'; W.push({ lvl: 'bad', msg: (cmp.name || 'Item') + ': OD ' + p.od + ' in. does not fit in ' + minHole + ' in. hole.' }); }
+        else if (stiffType && maxDls > rigidDls && maxDls > 0.5) { if (inZone) { row.note = 'Bends through the dogleg (in beam model)'; } else { row.flag = 'warn'; row.note = 'Must bend to pass the dogleg; soft-string drag is under-predicted here'; } }
+        else if (stiffType && row.clear < 0.25) { row.flag = 'warn'; row.note = 'Tight clearance'; }
+        var ym = pos(cmp.yield); if (ym && row.bend > 0.5 * ym) { row.flag = 'bad'; row.note = 'Bending stress above 50% of yield'; }
+        rows.push(row);
+      });
+      R.bha = rows;
+      var flagged = rows.filter(function (r) { return r.flag !== 'ok' && r.type !== 'dp'; });
+      if (flagged.some(function (r) { return r.note.indexOf('Must bend') === 0; })) W.push({ lvl: 'warn', msg: 'Stiff BHA items must bend through doglegs (' + flagged.filter(function (r) { return r.note.indexOf('Must bend') === 0; }).map(function (r) { return r.name; }).join(', ') + ') and the beam model is off or did not converge, so stiffness forces are not included. Treat the high-friction case as the planning value.' });
+    })();
+
+    /* allowable tension per element, for the chart */
+    R.allow = els.map(function (el) { return el.p.rated ? el.p.tens / dfT : null; });
+    return R;
+  }
+
+  var api = { E: E, G: G, buildTraj: buildTraj, trajAt: trajAt, profileStations: profileStations, compProps: compProps, layout: layout, discretize: discretize, marchUp: marchUp, marchDown: marchDown, MU: MU, MD: MD, beamSolve: beamSolve, buildBeam: buildBeam, stretchIn: stretchIn, run: run, holeAt: holeAt };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.TD = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+<script>
+(function () {
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+  var btn = document.getElementById('b-install'), ev = null;
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); ev = e; if (btn) btn.style.display = 'inline-block'; });
+  if (btn) btn.addEventListener('click', function () { if (ev) { ev.prompt(); ev = null; btn.style.display = 'none'; } });
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (ios && !standalone) setTimeout(function () { var t = document.getElementById('toast'); if (!t) return; try { if (localStorage.getItem('tdfish.ioshint')) return; localStorage.setItem('tdfish.ioshint', '1'); } catch (e) {} t.textContent = 'To install: tap the Share button, then "Add to Home Screen".'; t.hidden = false; setTimeout(function () { t.hidden = true; }, 7000); }, 1500);
+})();
+</script>
+
+<script>(function () {
+  'use strict';
+  var TD = window.TD, KEY = 'tdfish.case.v1';
+  var TABS = [['job', 'Job'], ['path', 'Well path'], ['wellbore', 'Wellbore & fluid'], ['string', 'String'], ['operation', 'Operation'], ['results', 'Results'], ['simple', 'PDF report'], ['report', 'Detailed report']];
+  var S, R = { warnings: [] }, REG = {}, timer = null, curTab = 'results', framed = false;
+  try { framed = window.self !== window.top; } catch (e) { framed = true; }
+
+  /* ---------- helpers ---------- */
+  function $(s, r) { return (r || document).querySelector(s); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function get(o, p) { return p.split('.').reduce(function (a, k) { return a == null ? a : a[k]; }, o); }
+  function set(o, p, v) { var ks = p.split('.'), l = ks.pop(); ks.reduce(function (a, k) { return a[k]; }, o)[l] = v; }
+  function ok(v) { return v != null && isFinite(v); }
+  function k1(v) { return ok(v) ? (v / 1000).toFixed(1) : '–'; }
+  function n0(v) { return ok(v) ? Math.round(v).toLocaleString('en-US') : '–'; }
+  function fx(v, d) { return ok(v) ? Number(v).toFixed(d) : '–'; }
+  function num(v) { v = parseFloat(v); return isFinite(v) ? v : 0; }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function toast(msg) { var t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3200); }
+
+  /* ---------- catalog (typical values; confirm against the pipe tally and tool manuals) ---------- */
+  var CAT = [
+    ['Drill pipe (adjusted weight, E-75 default)', [
+      { name: '2-3/8 in. 6.65# drill pipe', type: 'dp', od: 2.375, id: 1.815, tjod: 3.375, wt: 6.99, yield: 75000, cls: 'premium' },
+      { name: '2-7/8 in. 10.40# drill pipe', type: 'dp', od: 2.875, id: 2.151, tjod: 4.125, wt: 10.87, yield: 75000, cls: 'premium' },
+      { name: '3-1/2 in. 13.30# drill pipe', type: 'dp', od: 3.5, id: 2.764, tjod: 4.75, wt: 13.93, yield: 75000, cls: 'premium' },
+      { name: '3-1/2 in. 15.50# drill pipe', type: 'dp', od: 3.5, id: 2.602, tjod: 5, wt: 16.54, yield: 75000, cls: 'premium' },
+      { name: '4 in. 14.00# drill pipe', type: 'dp', od: 4, id: 3.34, tjod: 5.25, wt: 15.04, yield: 75000, cls: 'premium' },
+      { name: '4-1/2 in. 16.60# drill pipe', type: 'dp', od: 4.5, id: 3.826, tjod: 6.25, wt: 18.37, yield: 75000, cls: 'premium' },
+      { name: '5 in. 19.50# drill pipe', type: 'dp', od: 5, id: 4.276, tjod: 6.625, wt: 21.92, yield: 75000, cls: 'premium' },
+      { name: '5-1/2 in. 21.90# drill pipe', type: 'dp', od: 5.5, id: 4.778, tjod: 7, wt: 23.78, yield: 75000, cls: 'premium' }]],
+    ['Heavy-weight drill pipe', [
+      { name: '3-1/2 in. HWDP', type: 'hwdp', od: 3.5, id: 2.0625, tjod: 4.75, wt: 25.3, yield: 55000, len: 30 },
+      { name: '4 in. HWDP', type: 'hwdp', od: 4, id: 2.5625, tjod: 5.25, wt: 29.7, yield: 55000, len: 30 },
+      { name: '4-1/2 in. HWDP', type: 'hwdp', od: 4.5, id: 2.75, tjod: 6.25, wt: 41, yield: 55000, len: 30 },
+      { name: '5 in. HWDP', type: 'hwdp', od: 5, id: 3, tjod: 6.5, wt: 49.3, yield: 55000, len: 30 }]],
+    ['Drill collars (weight from OD and ID)', [
+      { name: '3-1/8 in. drill collar', type: 'dc', od: 3.125, id: 1.25, yield: 110000, len: 30 },
+      { name: '4-3/4 in. drill collar', type: 'dc', od: 4.75, id: 2.25, yield: 110000, len: 30 },
+      { name: '6-1/4 in. drill collar', type: 'dc', od: 6.25, id: 2.8125, yield: 110000, len: 30 },
+      { name: '6-1/2 in. drill collar', type: 'dc', od: 6.5, id: 2.8125, yield: 110000, len: 30 },
+      { name: '8 in. drill collar', type: 'dc', od: 8, id: 2.8125, yield: 100000, len: 30 }]],
+    ['Fishing tools (templates: enter real dimensions and ratings)', [
+      { name: 'Overshot 8-1/8 in.', type: 'overshot', od: 8.125, id: 6.5, len: 3.5 },
+      { name: 'Overshot 5-3/4 in.', type: 'overshot', od: 5.75, id: 4.5, len: 3 },
+      { name: 'Releasing spear', type: 'spear', od: 3.5, id: 1, len: 4 },
+      { name: 'Fishing jar 6-1/4 in.', type: 'jar', od: 6.25, id: 2.25, len: 12 },
+      { name: 'Fishing jar 4-3/4 in.', type: 'jar', od: 4.75, id: 2, len: 12 },
+      { name: 'Bumper sub 6-1/4 in.', type: 'bumper', od: 6.25, id: 2.25, len: 6 },
+      { name: 'Accelerator 6-1/4 in.', type: 'accel', od: 6.25, id: 2.25, len: 12 },
+      { name: 'Safety joint 6-1/4 in.', type: 'tool', od: 6.25, id: 2.25, len: 3 },
+      { name: 'Washover pipe 8-1/8 in.', type: 'washpipe', od: 8.125, id: 7.25, len: 30 },
+      { name: 'Rotary shoe 8-1/4 in.', type: 'mill', od: 8.25, id: 7, len: 3 },
+      { name: 'Junk mill 8-3/8 in.', type: 'mill', od: 8.375, id: 1.5, len: 3 },
+      { name: 'Taper mill 8-3/8 in.', type: 'mill', od: 8.375, id: 2.25, len: 4 }]]
+  ];
+  var CATSEC = [
+    { name: '13-3/8 in. 68# casing', cased: 'cased', id: 12.415, mu: 0.25 }, { name: '9-5/8 in. 47# casing', cased: 'cased', id: 8.681, mu: 0.25 },
+    { name: '9-5/8 in. 40# casing', cased: 'cased', id: 8.835, mu: 0.25 }, { name: '7 in. 29# casing/liner', cased: 'cased', id: 6.184, mu: 0.25 },
+    { name: '7 in. 26# casing/liner', cased: 'cased', id: 6.276, mu: 0.25 }, { name: '5-1/2 in. 17# casing', cased: 'cased', id: 4.892, mu: 0.25 },
+    { name: '4-1/2 in. 11.6# liner', cased: 'cased', id: 4.0, mu: 0.25 }, { name: '12-1/4 in. open hole', cased: 'open', id: 12.25, mu: 0.3 },
+    { name: '8-1/2 in. open hole', cased: 'open', id: 8.5, mu: 0.3 }, { name: '6-1/8 in. open hole', cased: 'open', id: 6.125, mu: 0.3 }, { name: '6 in. open hole', cased: 'open', id: 6, mu: 0.3 }
+  ];
+  var TYPES = [['dp', 'Drill pipe / tubing'], ['hwdp', 'HWDP'], ['dc', 'Drill collar'], ['jar', 'Jar'], ['accel', 'Accelerator'], ['bumper', 'Bumper sub'], ['overshot', 'Overshot'], ['spear', 'Spear'], ['mill', 'Mill / shoe'], ['washpipe', 'Washover pipe'], ['tool', 'Other tool']];
+
+  function comp(o) { return { name: o.name || '', type: o.type || 'tool', od: o.od != null ? String(o.od) : '', id: o.id != null ? String(o.id) : '', tjod: o.tjod != null ? String(o.tjod) : '', len: o.len != null ? String(o.len) : '', wt: o.wt != null ? String(o.wt) : '', yield: o.yield != null ? String(o.yield) : '', cls: o.cls || 'new', maxPull: o.maxPull != null ? String(o.maxPull) : '', maxTorque: o.maxTorque != null ? String(o.maxTorque) : '' }; }
+  function baseCase() {
+    return { v: 1, example: false,
+      job: { well: '', field: '', rig: '', client: '', job: '', preparedBy: '', fisherman: '', companyRep: '', date: today(), notes: '' },
+      traj: { mode: 'profile', surveyText: '', profile: { type: 'vertical', td: '', kop: '', bur: '', inc: '', azi: '', dropMd: '', dor: '', finalInc: '' } },
+      secs: [{ name: '', cased: 'cased', top: '0', bottom: '', id: '', mu: '0.25', muSO: '' }],
+      comps: [comp({ name: 'Work string', type: 'dp' })],
+      fluid: { mwOut: '', mwIn: '' }, rig: { block: '', maxHook: '', maxTorque: '' },
+      op: { depth: '', fish: '', stuck: '', speed: '60', rpm: '', wob: '', tob: '', overpull: '', setdown: '', jarUp: '', jarDown: '', pumpOpen: '', torqueAtFish: '', backoffDepth: '', stretchHL1: '', stretchHL2: '', stretchIn: '', measPU: '', measSO: '', measROB: '', tobMode: 'enter', muCut: '0.3', cutOD: '', cutID: '', millLen: '', fishOD: '' },
+      settings: { sens: '0.05', lambda: '2.83', dfTension: '1.10', dfTorsion: '1.00', elLen: '30', stiff: 'on' } };
+  }
+  function exampleCase() {
+    var c = baseCase(); c.example = true;
+    c.job.well = 'EXAMPLE-01'; c.job.job = 'Fishing run: overshot on 5-in. drill pipe';
+    c.traj.profile = { type: 'j', td: '9500', kop: '1500', bur: '3', inc: '65', azi: '120', dropMd: '', dor: '', finalInc: '' };
+    c.secs = [{ name: '9-5/8 in. 47# casing', cased: 'cased', top: '0', bottom: '6000', id: '8.681', mu: '0.25' }, { name: '8-1/2 in. open hole', cased: 'open', top: '6000', bottom: '9500', id: '8.5', mu: '0.30' }];
+    c.comps = [
+      comp({ name: 'Overshot 8-1/8 in.', type: 'overshot', od: 8.125, id: 6.5, len: 3.5, maxPull: 400, maxTorque: 20000 }),
+      comp({ name: 'Bumper sub 6-1/4 in.', type: 'bumper', od: 6.25, id: 2.25, len: 6, maxPull: 350, maxTorque: 20000 }),
+      comp({ name: 'Fishing jar 6-1/4 in.', type: 'jar', od: 6.25, id: 2.25, len: 12, maxPull: 200, maxTorque: 20000 }),
+      comp({ name: '6-1/4 in. drill collar x 4', type: 'dc', od: 6.25, id: 2.8125, len: 120, yield: 110000, maxTorque: 22000 }),
+      comp({ name: 'Accelerator 6-1/4 in.', type: 'accel', od: 6.25, id: 2.25, len: 12, maxPull: 250, maxTorque: 20000 }),
+      comp({ name: '5 in. HWDP x 10', type: 'hwdp', od: 5, id: 3, tjod: 6.5, wt: 49.3, len: 300, yield: 55000, maxTorque: 29000 }),
+      comp({ name: '5 in. 19.50# drill pipe G-105', type: 'dp', od: 5, id: 4.276, tjod: 6.625, wt: 21.92, yield: 105000, cls: 'premium', maxTorque: 26000 })];
+    c.fluid = { mwOut: '9.2', mwIn: '' }; c.rig = { block: '35', maxHook: '500', maxTorque: '30000' };
+    c.op.depth = '8200'; c.op.fish = '5-in. drill pipe, top of fish at 8,200 ft MD'; c.op.overpull = '60'; c.op.setdown = '20'; c.op.jarUp = '80'; c.op.jarDown = '30'; c.op.torqueAtFish = '3000';
+    return c;
+  }
+  var BUILTIN = {};
+  function merge(base, o) { Object.keys(o || {}).forEach(function (k) { if (o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) && base[k] && typeof base[k] === 'object') merge(base[k], o[k]); else base[k] = o[k]; }); return base; }
+  function loadCase(o) { S = merge(baseCase(), o); if (!Array.isArray(S.secs)) S.secs = []; if (!Array.isArray(S.comps)) S.comps = []; S.comps = S.comps.map(comp); renderInputs(); calc(); }
+  function autosave() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } }
+
+  function parseSurvey(txt) {
+    var rows = [];
+    String(txt || '').split(/\r?\n/).forEach(function (line) {
+      line = line.trim(); if (!line) return;
+      var p = line.split(/[\t;]+|\s+/).filter(Boolean);
+      if (p.length >= 2) p = p.map(function (x) { return x.replace(',', '.'); }); else p = line.split(',');
+      p = p.map(parseFloat);
+      if (p.length >= 2 && isFinite(p[0]) && isFinite(p[1])) rows.push({ md: p[0], inc: p[1], azi: isFinite(p[2]) ? p[2] : 0 });
+    });
+    return rows;
+  }
+
+  /* ---------- input rendering ---------- */
+  function fld(path, label, unit, opt) {
+    opt = opt || {}; var v = get(S, path); if (v == null) v = '';
+    var id = 'f-' + path.replace(/\./g, '-'), lab = '<span>' + esc(label) + (unit ? ' <em>(' + esc(unit) + ')</em>' : '') + '</span>';
+    if (opt.options) return '<label class="fld" for="' + id + '">' + lab + '<select id="' + id + '" data-k="' + path + '"' + (opt.re ? ' data-re="1"' : '') + '>' + opt.options.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(v) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>';
+    return '<label class="fld" for="' + id + '">' + lab + '<input id="' + id + '" data-k="' + path + '" value="' + esc(v) + '"' + (opt.text ? '' : ' inputmode="decimal"') + (opt.type ? ' type="' + opt.type + '"' : '') + (opt.ph ? ' placeholder="' + esc(opt.ph) + '"' : '') + '></label>';
+  }
+  function cell(path, label, opt) {
+    opt = opt || {}; var v = get(S, path); if (v == null) v = ''; var id = 'f-' + path.replace(/\./g, '-');
+    if (opt.options) return '<td><select id="' + id + '" data-k="' + path + '" aria-label="' + esc(label) + '">' + opt.options.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (String(v) === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></td>';
+    return '<td><input id="' + id + '" data-k="' + path + '" value="' + esc(v) + '" aria-label="' + esc(label) + '"' + (opt.text ? ' class="w"' : ' inputmode="decimal"') + (opt.dis ? ' disabled placeholder="' + esc(opt.dis) + '"' : '') + (opt.list ? ' list="' + opt.list + '"' : '') + (opt.ph ? ' placeholder="' + esc(opt.ph) + '"' : '') + '></td>';
+  }
+
+  function renderInputs() {
+    $('#p-job').innerHTML = '<div class="card"><h2>Job details <small>printed on the report header</small></h2><div class="grid">' +
+      fld('job.well', 'Well', '', { text: 1 }) + fld('job.field', 'Field', '', { text: 1 }) + fld('job.rig', 'Rig', '', { text: 1 }) + fld('job.client', 'Client company', '', { text: 1 }) +
+      fld('job.job', 'Job description', '', { text: 1 }) + fld('job.date', 'Date', '', { text: 1, type: 'date' }) + fld('job.preparedBy', 'Prepared by', '', { text: 1 }) +
+      fld('job.fisherman', 'Fisherman', '', { text: 1 }) + fld('job.companyRep', 'Company representative', '', { text: 1 }) + '</div>' +
+      '<div style="margin-top:10px">' + fld('job.notes', 'Notes for the report', '', { text: 1 }) + '</div></div>';
+
+    var P = S.traj.profile, isS = S.traj.mode === 'survey';
+    $('#p-path').innerHTML = '<div class="card"><h2>Well path</h2>' +
+      '<div class="seg" role="group" aria-label="Well path source"><button data-act="mode:profile" aria-pressed="' + (!isS) + '">Planned profile (no survey)</button><button data-act="mode:survey" aria-pressed="' + isS + '">Directional survey</button></div>' +
+      (isS ? '<p class="help" style="margin-top:10px">Paste one station per line: measured depth (ft), inclination (deg), azimuth (deg). Tabs, spaces, semicolons or commas all work. Header lines are ignored.</p>' +
+        '<textarea id="f-traj-surveyText" data-k="traj.surveyText" aria-label="Survey stations" spellcheck="false" placeholder="0   0     0&#10;1500  0     0&#10;1600  3.0   120">' + esc(S.traj.surveyText) + '</textarea><div class="row" style="margin-top:8px"><button data-act="survey-file">Import survey file</button><span class="hint">.csv or .txt</span></div>'
+        : '<p class="help" style="margin-top:10px">Use this when no survey exists. Enter the planned shape. The report will state that results are based on a planned profile.</p><div class="grid">' +
+        fld('traj.profile.type', 'Profile type', '', { re: 1, options: [['vertical', 'Vertical'], ['j', 'Build and hold (J)'], ['s', 'Build, hold and drop (S)']] }) + fld('traj.profile.td', 'Total depth', 'ft MD') +
+        (P.type !== 'vertical' ? fld('traj.profile.kop', 'Kick-off point', 'ft MD') + fld('traj.profile.bur', 'Build rate', 'deg/100 ft') + fld('traj.profile.inc', 'Hold inclination', 'deg') + fld('traj.profile.azi', 'Azimuth', 'deg') : '') +
+        (P.type === 's' ? fld('traj.profile.dropMd', 'Start of drop', 'ft MD') + fld('traj.profile.dor', 'Drop rate', 'deg/100 ft') + fld('traj.profile.finalInc', 'Final inclination', 'deg') : '') + '</div>') +
+      '</div><div class="card"><h2>Path check</h2><div id="path-sum"></div><div id="path-chart"></div><details><summary>Station table</summary><div class="scroll" id="path-table"></div></details></div>';
+
+    $('#p-wellbore').innerHTML = '<div class="card"><h2>Wellbore sections <small>what the string sees, from surface down</small></h2>' +
+      '<div class="scroll"><table class="tbl"><thead><tr><th>Description</th><th>Type</th><th>Top (ft MD)</th><th>Bottom (ft MD)</th><th>ID (in)</th><th>Friction factor</th><th>Slack-off friction factor</th><th></th></tr></thead><tbody>' +
+      S.secs.map(function (s, i) { var p = 'secs.' + i + '.'; return '<tr>' + cell(p + 'name', 'Description', { text: 1 }) + cell(p + 'cased', 'Type', { options: [['cased', 'Cased'], ['open', 'Open hole']] }) + cell(p + 'top', 'Top') + cell(p + 'bottom', 'Bottom') + cell(p + 'id', 'ID') + cell(p + 'mu', 'Friction factor') + cell(p + 'muSO', 'Slack-off friction factor', { ph: 'same' }) + '<td class="act"><button class="ic" data-act="del-sec:' + i + '" aria-label="Remove section">✕</button></td></tr>'; }).join('') +
+      '</tbody></table></div><div class="row" style="margin-top:8px"><select id="cat-sec" aria-label="Add section from catalog" style="max-width:280px"><option value="">Add from catalog…</option>' + CATSEC.map(function (s, i) { return '<option value="' + i + '">' + esc(s.name) + ' (ID ' + s.id + ')</option>'; }).join('') + '</select><button data-act="add-sec">Add blank section</button></div>' +
+      '<p class="help" style="margin-top:10px">Starting friction factors: about 0.20 to 0.25 in casing and 0.25 to 0.40 in open hole with water-based mud. Calibrate them on the Operation tab from measured weights.</p><p class="help">Slack-off friction factor is optional. Leave it blank to use the same value. Field data often needs a higher value going down (in one field check, 0.22 going down against 0.16 going up) because of debris and ledges.</p></div>' +
+      '<div class="card"><h2>Fluid</h2><div class="grid">' + fld('fluid.mwOut', 'Fluid density in annulus', 'ppg') + fld('fluid.mwIn', 'Fluid density inside string', 'ppg', { ph: 'same as annulus' }) + '</div></div>' +
+      '<div class="card"><h2>Rig</h2><div class="grid">' + fld('rig.block', 'Block and hook weight', 'klbs') + fld('rig.maxHook', 'Hoisting limit', 'klbs') + fld('rig.maxTorque', 'Rotary / top drive torque limit', 'ft-lb') + '</div></div>';
+
+    var last = S.comps.length - 1;
+    $('#p-string').innerHTML = '<div class="card"><h2>String and BHA <small>listed from the bottom up</small></h2><p class="help">Row 1 is the fishing tool at the bottom. The last row is the work string and runs to surface. Leave weight blank to estimate it from OD and ID. Enter tool pull and torque ratings from the manufacturer manual; pipe limits are calculated from yield and class.</p>' +
+      '<datalist id="dl-yield"><option value="55000"><option value="75000"><option value="95000"><option value="105000"><option value="110000"><option value="135000"></datalist>' +
+      '<div class="scroll"><table class="tbl"><thead><tr><th>#</th><th>Description</th><th>Type</th><th>OD (in)</th><th>ID (in)</th><th>Tool-joint OD (in)</th><th>Length (ft)</th><th>Weight (lb/ft)</th><th>Yield (psi)</th><th>Class</th><th>Max pull (klbs)</th><th>Max torque (ft-lb)</th><th></th></tr></thead><tbody>' +
+      S.comps.map(function (c, i) { var p = 'comps.' + i + '.'; return '<tr><td class="n">' + (i + 1) + '</td>' + cell(p + 'name', 'Description', { text: 1 }) + cell(p + 'type', 'Type', { options: TYPES }) + cell(p + 'od', 'OD') + cell(p + 'id', 'ID') + cell(p + 'tjod', 'Tool-joint OD') + (i === last ? cell(p + 'len', 'Length', { dis: 'to surface' }) : cell(p + 'len', 'Length')) + cell(p + 'wt', 'Weight') + cell(p + 'yield', 'Yield', { list: 'dl-yield' }) + cell(p + 'cls', 'Class', { options: [['new', 'New'], ['premium', 'Premium']] }) + cell(p + 'maxPull', 'Max pull') + cell(p + 'maxTorque', 'Max torque') +
+        '<td class="act"><button class="ic" data-act="up-comp:' + i + '" aria-label="Move down the hole"' + (i === 0 ? ' disabled' : '') + '>↑</button> <button class="ic" data-act="down-comp:' + i + '" aria-label="Move up the hole"' + (i === last ? ' disabled' : '') + '>↓</button> <button class="ic" data-act="del-comp:' + i + '" aria-label="Remove item">✕</button></td></tr>'; }).join('') +
+      '</tbody></table></div><div class="row" style="margin-top:8px"><select id="cat-comp" aria-label="Add item from catalog" style="max-width:320px"><option value="">Add from catalog…</option>' + CAT.map(function (g, gi) { return '<optgroup label="' + esc(g[0]) + '">' + g[1].map(function (o, oi) { return '<option value="' + gi + ':' + oi + '">' + esc(o.name) + '</option>'; }).join('') + '</optgroup>'; }).join('') + '</select><button data-act="add-comp">Add blank item</button></div>' +
+      '<p class="hint" style="margin-top:8px">Catalog values are typical. Confirm against the pipe tally and the tool manuals.</p><div id="string-sum" style="margin-top:10px"></div></div>';
+
+    $('#p-operation').innerHTML = '<div class="card"><h2>Depth and fish</h2><div class="grid">' + fld('op.depth', 'String depth (bottom of string = top of fish)', 'ft MD') + fld('op.fish', 'Fish description', '', { text: 1 }) + fld('op.stuck', 'Suspected stuck mechanism', '', { text: 1 }) + '</div></div>' +
+      '<div class="card"><h2>Pulling and setting down on the fish</h2><div class="grid">' + fld('op.overpull', 'Planned overpull at surface', 'klbs') + fld('op.setdown', 'Planned set-down at surface', 'klbs') + fld('op.jarUp', 'Jar up-trip setting', 'klbs') + fld('op.jarDown', 'Jar down-trip setting', 'klbs') + fld('op.pumpOpen', 'Pump-open force at jar', 'klbs', { ph: '0 with pumps off' }) + '</div><p class="hint" style="margin-top:8px">Jar readings need one string item of type Jar.</p></div>' +
+      '<div class="card"><h2>Rotation and torque</h2><div class="grid">' + fld('op.torqueAtFish', 'Torque wanted at the fish', 'ft-lb') + fld('op.rpm', 'Rotation while tripping', 'rpm') + fld('op.speed', 'Trip speed', 'ft/min') + fld('op.backoffDepth', 'Back-off depth', 'ft MD') + '</div></div>' +
+      '<div class="card"><h2>Milling or washover <small>rotating on bottom, with the mill or shoe as the bottom string item</small></h2><div class="grid">' + fld('op.wob', 'Weight on mill or shoe', 'klbs') +
+      fld('op.tobMode', 'Torque at mill or shoe', '', { re: 1, options: [['enter', 'Enter a value'], ['est', 'Estimate from weight']] }) +
+      (S.op.tobMode === 'est' ? fld('op.muCut', 'Cutting friction coefficient') + fld('op.cutOD', 'Cutting face OD', 'in', { ph: 'bottom item OD' }) + fld('op.cutID', 'Cutting face ID', 'in', { ph: 'bottom item ID' }) : fld('op.tob', 'Torque at the tool', 'ft-lb')) +
+      fld('op.millLen', 'Interval to mill or wash over', 'ft') + fld('op.fishOD', 'Largest fish OD', 'in') + '</div>' +
+      '<p class="hint" style="margin-top:8px">Estimated torque = coefficient × weight × effective radius of the cutting face. For a flat mill this is the bit formula T = μ·D·W/36. The coefficient depends on the dressing and what is being cut: start at 0.3 and correct it from the first measured torque. If you enter a measured torque, the results show the coefficient it implies.</p></div>' +
+      '<div class="card"><h2>Stretch test <small>optional, estimates the stuck point</small></h2><div class="grid">' + fld('op.stretchHL1', 'First pull, indicator reading', 'klbs') + fld('op.stretchHL2', 'Second pull, indicator reading', 'klbs') + fld('op.stretchIn', 'Stretch between the two marks', 'in') + '</div></div>' +
+      '<div class="card"><h2>Friction calibration <small>optional, from weights measured at this depth before latching</small></h2><div class="grid">' + fld('op.measPU', 'Measured pick-up weight', 'klbs') + fld('op.measSO', 'Measured slack-off weight', 'klbs') + fld('op.measROB', 'Measured rotating weight', 'klbs') + '</div><div id="cal-out" style="margin-top:10px"></div></div>' +
+      '<div class="card"><h2>Calculation settings</h2><div class="grid">' + fld('settings.sens', 'Friction sensitivity band', '±') + fld('settings.lambda', 'Helical buckling coefficient', '', { options: [['2.83', '2.83 (conservative)'], ['3.66', '3.66'], ['5.65', '5.65']] }) + fld('settings.dfTension', 'Tension design factor') + fld('settings.dfTorsion', 'Torsion design factor') + fld('settings.elLen', 'Element length', 'ft') + fld('settings.stiff', 'BHA stiffness', '', { options: [['on', 'Beam model (stiffness included)'], ['off', 'Soft-string only']] }) + '</div></div>';
+  }
+
+  /* ---------- charts ---------- */
+  function ticks(a, b, n) {
+    if (!(b > a)) { b = a + 1; }
+    var raw = (b - a) / n, p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), f = raw / p, st = (f < 1.5 ? 1 : f < 3 ? 2 : f < 7 ? 5 : 10) * p;
+    var t0 = Math.floor(a / st + 1e-9) * st, t1 = Math.ceil(b / st - 1e-9) * st, out = [];
+    for (var v = t0; v <= t1 + st * 1e-6; v += st) out.push(Math.round(v / st) * st);
+    return out;
+  }
+  function tl(v) { return Math.abs(v) >= 1000 ? Math.round(v).toLocaleString('en-US') : String(Math.round(v * 100) / 100); }
+  function chart(o) {
+    var w = Math.round(o.w || 640), h = Math.round(o.h || w * 0.7), mL = 58, mR = 26, mT = 10, mB = 40, xs = [], ys = [];
+    (o.series || []).forEach(function (s) { s.pts.forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    (o.bands || []).forEach(function (b) { b.lo.concat(b.hi).forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    (o.marks || []).forEach(function (m) { xs.push(m.x); ys.push(m.y); });
+    if (o.x0) xs.push(0); if (o.y0) ys.push(0);
+    if (!xs.length) { xs = [0, 1]; ys = [0, 1]; }
+    var xt = ticks(Math.min.apply(null, xs), Math.max.apply(null, xs), w < 430 ? 4 : 6), yt = ticks(Math.min.apply(null, ys), Math.max.apply(null, ys), 6);
+    var x0 = xt[0], x1 = xt[xt.length - 1], y0 = yt[0], y1 = yt[yt.length - 1], pw = w - mL - mR, ph = h - mT - mB;
+    function sx(v) { return mL + (v - x0) / (x1 - x0) * pw; }
+    function sy(v) { return o.down ? mT + (v - y0) / (y1 - y0) * ph : mT + ph - (v - y0) / (y1 - y0) * ph; }
+    function path(pts) { return 'M' + pts.map(function (p) { return sx(p[0]).toFixed(1) + ',' + sy(p[1]).toFixed(1); }).join('L'); }
+    var g = '';
+    xt.forEach(function (v) { g += '<line class="grid" x1="' + sx(v).toFixed(1) + '" x2="' + sx(v).toFixed(1) + '" y1="' + mT + '" y2="' + (mT + ph) + '"/><text x="' + sx(v).toFixed(1) + '" y="' + (mT + ph + 15) + '" text-anchor="middle">' + tl(v) + '</text>'; });
+    yt.forEach(function (v) { g += '<line class="grid" x1="' + mL + '" x2="' + (mL + pw) + '" y1="' + sy(v).toFixed(1) + '" y2="' + sy(v).toFixed(1) + '"/><text x="' + (mL - 6) + '" y="' + (sy(v) + 4).toFixed(1) + '" text-anchor="end">' + tl(v) + '</text>'; });
+    if (x0 < 0 && x1 > 0) g += '<line class="axis" x1="' + sx(0).toFixed(1) + '" x2="' + sx(0).toFixed(1) + '" y1="' + mT + '" y2="' + (mT + ph) + '"/>';
+    g += '<text x="' + (mL + pw / 2) + '" y="' + (h - 6) + '" text-anchor="middle">' + esc(o.xl) + '</text><text transform="translate(13,' + (mT + ph / 2) + ') rotate(-90)" text-anchor="middle">' + esc(o.yl) + '</text>';
+    (o.bands || []).forEach(function (b) { g += '<path class="bd ' + b.cls + '" d="' + path(b.lo.concat(b.hi.slice().reverse())) + 'Z"/>'; });
+    (o.series || []).forEach(function (s) {
+      if (s.pts.length < 1) return;
+      g += '<path class="ln ' + s.cls + (s.dash ? ' dash' : '') + '" d="' + path(s.pts) + '"/>';
+      if (!s.dash && !s.noDot) { var e = s.pts[s.pts.length - 1]; g += '<circle class="dot ' + s.cls + '" r="4" cx="' + sx(e[0]).toFixed(1) + '" cy="' + sy(e[1]).toFixed(1) + '"/>'; }
+    });
+    (o.marks || []).forEach(function (m) {
+      var X = sx(m.x), Y = sy(m.y), right = m.left ? false : X < mL + pw * 0.6;
+      g += '<circle class="dot ' + (m.cls || 'sn') + '" r="4.5" cx="' + X.toFixed(1) + '" cy="' + Y.toFixed(1) + '"/><text class="mk" x="' + (X + (right ? 8 : -8)).toFixed(1) + '" y="' + (Y + (m.dy || 4)).toFixed(1) + '" text-anchor="' + (right ? 'start' : 'end') + '">' + esc(m.label) + '</text>';
+    });
+    g += '<line class="xh" x1="-9" x2="-9" y1="-9" y2="-9"/>';
+    REG[o.id] = { o: o, x0: x0, x1: x1, y0: y0, y1: y1, mL: mL, mT: mT, pw: pw, ph: ph, w: w, h: h };
+    var leg = (o.series || []).filter(function (s) { return s.name; }).map(function (s) { return '<span><b class="' + s.cls + '"></b>' + esc(s.name) + '</span>'; }).join('') + (o.bandLabel ? '<span><b class="band"></b>' + esc(o.bandLabel) + '</span>' : '');
+    return '<figure class="chart"><figcaption>' + esc(o.title) + '</figcaption>' + (o.sub ? '<div class="sub">' + esc(o.sub) + '</div>' : '') + (leg ? '<div class="legend">' + leg + '</div>' : '') +
+      '<svg class="plot" data-cid="' + o.id + '" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" role="img" aria-label="' + esc(o.title) + '">' + g + '</svg></figure>';
+  }
+  function interp(pts, v, byY) {
+    var a = byY ? 1 : 0, b = byY ? 0 : 1;
+    for (var i = 1; i < pts.length; i++) { var p = pts[i - 1], q = pts[i], lo = Math.min(p[a], q[a]), hi = Math.max(p[a], q[a]); if (v >= lo && v <= hi) { return hi === lo ? q[b] : p[b] + (q[b] - p[b]) * (v - p[a]) / (q[a] - p[a]); } }
+    return null;
+  }
+  function hideTip() { $('#tip').hidden = true; Array.prototype.forEach.call(document.querySelectorAll('svg.plot .xh'), function (l) { l.setAttribute('x1', -9); l.setAttribute('x2', -9); l.setAttribute('y1', -9); l.setAttribute('y2', -9); }); }
+  function onHover(ev) {
+    var svg = ev.target && ev.target.closest ? ev.target.closest('svg.plot[data-cid]') : null;
+    if (!svg) { hideTip(); return; }
+    var g = REG[svg.getAttribute('data-cid')]; if (!g || g.o.noHover) { hideTip(); return; }
+    var r = svg.getBoundingClientRect(), k = g.w / r.width, px = (ev.clientX - r.left) * k, py = (ev.clientY - r.top) * k, byY = g.o.indep === 'y', v;
+    if (px < g.mL || px > g.mL + g.pw || py < g.mT || py > g.mT + g.ph) { hideTip(); return; }
+    if (byY) v = g.o.down ? g.y0 + (py - g.mT) / g.ph * (g.y1 - g.y0) : g.y1 - (py - g.mT) / g.ph * (g.y1 - g.y0); else v = g.x0 + (px - g.mL) / g.pw * (g.x1 - g.x0);
+    var tip = $('#tip'), any = false; tip.textContent = '';
+    var hd = document.createElement('div'); hd.textContent = (g.o.indepLabel || '') + ' ' + tl(Math.round(v)) + ' ' + (g.o.indepUnit || ''); tip.appendChild(hd);
+    g.o.series.forEach(function (s) {
+      if (!s.name) return; var val = interp(s.pts, v, byY); if (val == null) return; any = true;
+      var row = document.createElement('div'), key = document.createElement('i'), b = document.createElement('b');
+      key.style.borderColor = getComputedStyle(document.documentElement).getPropertyValue({ s1: '--s1', s2: '--s2', s3: '--s3', crit: '--crit' }[s.cls] || '--muted');
+      b.textContent = (Math.abs(val) >= 1000 ? Math.round(val).toLocaleString('en-US') : val.toFixed(1)) + ' ' + (g.o.depUnit || '');
+      row.appendChild(key); row.appendChild(b); row.appendChild(document.createTextNode('  ' + s.name)); tip.appendChild(row);
+    });
+    if (!any) { hideTip(); return; }
+    var xh = svg.querySelector('.xh');
+    if (byY) { xh.setAttribute('x1', g.mL); xh.setAttribute('x2', g.mL + g.pw); xh.setAttribute('y1', py); xh.setAttribute('y2', py); } else { xh.setAttribute('x1', px); xh.setAttribute('x2', px); xh.setAttribute('y1', g.mT); xh.setAttribute('y2', g.mT + g.ph); }
+    tip.hidden = false;
+    var tw = tip.offsetWidth, th = tip.offsetHeight, X = ev.clientX + 14, Y = ev.clientY + 14;
+    if (X + tw > window.innerWidth - 6) X = ev.clientX - tw - 14; if (Y + th > window.innerHeight - 6) Y = ev.clientY - th - 14;
+    tip.style.left = Math.max(6, X) + 'px'; tip.style.top = Math.max(6, Y) + 'px';
+  }
+
+  function charts(pre, w) {
+    var C = {}, els = R.els, D = R.D, hD = Math.round(Math.max(300, Math.min(460, w * 0.78))), hT = Math.round(Math.max(240, Math.min(360, w * 0.6)));
+    var b = R.broom, blk = R.block / 1000, sens = num(S.settings.sens);
+    function col(k) { return [[blk, 0]].concat(b.map(function (r) { return [r[k] / 1000, r.d]; })); }
+    C.broom = chart({ id: pre + 'broom', w: w, h: hD, title: 'Expected weights while running in', sub: 'Indicator reading against string depth. Block weight included.' + ((S.op.fieldPts || []).length ? ' Dots: weights measured in the field (DDR).' : ''), xl: 'Hookload (klbs)', yl: 'String depth (ft MD)', down: true, indep: 'y', indepLabel: 'Depth', indepUnit: 'ft', depUnit: 'klbs',
+      series: [{ name: 'Pick-up', cls: 's1', pts: col('pu') }, { name: 'Slack-off', cls: 's2', pts: col('so') }, { name: 'Rotating off bottom', cls: 's3', pts: col('rob') }],
+      marks: (S.op.fieldPts || []).filter(function (p) { return p.d <= D + 1; }).reduce(function (a, p) { a.push({ x: p.pu + blk, y: p.d, cls: 's1', label: '' }, { x: p.so + blk, y: p.d, cls: 's2', left: 1, label: 'DDR ' + p.lab + ': PU ' + p.pu + ' / SO ' + p.so }); return a; }, []),
+      bands: sens && b[0].puLo != null ? [{ cls: 's1', lo: col('puLo'), hi: col('puHi') }, { cls: 's2', lo: col('soHi'), hi: col('soLo') }] : [], bandLabel: sens ? 'Friction factor ±' + sens : '' });
+    function prof(pf, key) { var pts = els.map(function (el, i) { return [pf[i][key + 't'] / (key === 'T' ? 1000 : 1), el.top]; }); pts.push([pf[els.length - 1][key + 'b'] / (key === 'T' ? 1000 : 1), els[els.length - 1].bot]); return pts; }
+    var ser = [{ name: 'Pick-up', cls: 's1', pts: prof(R.pu.prof, 'T'), noDot: 1 }, { name: 'Slack-off', cls: 's2', pts: prof(R.so.prof, 'T'), noDot: 1 }, { name: 'Rotating', cls: 's3', pts: prof(R.rob.prof, 'T'), noDot: 1 }];
+    var maxT = Math.max.apply(null, R.pu.prof.map(function (p) { return p.Tt; })), al = [], maxAl = 0;
+    els.forEach(function (el, i) { if (R.allow[i] != null) { al.push([R.allow[i] / 1000, el.top], [R.allow[i] / 1000, el.bot]); maxAl = Math.max(maxAl, R.allow[i]); } });
+    var showAl = al.length && maxAl <= 3.5 * maxT;
+    if (showAl) ser.push({ name: 'Allowable tension', cls: 'crit', dash: 1, pts: al });
+    C.tension = chart({ id: pre + 'tension', w: w, h: hD, title: 'Tension along the string', sub: 'Free string at ' + n0(D) + ' ft. Negative values are compression.' + (al.length && !showAl ? ' Allowable tension is off the scale.' : ''), xl: 'Effective tension (klbs)', yl: 'Depth (ft MD)', down: true, indep: 'y', indepLabel: 'Depth', indepUnit: 'ft', depUnit: 'klbs', series: ser });
+    C.side = chart({ id: pre + 'side', w: w, h: hD, title: 'Side force while picking up', sub: 'Where the drag is generated.', xl: 'Side force (lb/ft)', yl: 'Depth (ft MD)', down: true, x0: true, indep: 'y', indepLabel: 'Depth', indepUnit: 'ft', depUnit: 'lb/ft',
+      series: [{ name: 'Side force', cls: 's1', noDot: 1, pts: els.map(function (el, i) { return [R.pu.prof[i].Fn / el.L, (el.top + el.bot) / 2]; }) }] });
+    function tqProf(pf) { var pts = els.map(function (el, i) { return [pf[i].Mt, el.top]; }); pts.push([pf[els.length - 1].Mb, D]); return pts; }
+    C.torque = chart({ id: pre + 'torque', w: w, h: hD, title: 'Torque along the string while rotating', sub: 'Friction torque builds from the bottom up.', xl: 'Torque (ft-lb)', yl: 'Depth (ft MD)', down: true, x0: true, indep: 'y', indepLabel: 'Depth', indepUnit: 'ft', depUnit: 'ft-lb',
+      series: (R.mill ? [{ name: 'Milling, on bottom', cls: 's1', noDot: 1, pts: tqProf(R.mill.prof) }] : []).concat([{ name: 'Rotating off bottom', cls: 's3', noDot: 1, pts: tqProf(R.rob.prof) }]) });
+    if (R.mill && R.mill.sweep.length > 1) {
+      var sw = R.mill.sweep, hM = Math.round(Math.max(260, Math.min(380, w * 0.62)));
+      C.millHL = chart({ id: pre + 'millhl', w: w, h: hM, title: 'Indicator reading across the interval', sub: 'Rotating, with and without ' + k1(R.mill.wob) + ' klbs on the tool.', xl: 'Hookload (klbs)', yl: 'Tool depth (ft MD)', down: true, indep: 'y', indepLabel: 'Depth', indepUnit: 'ft', depUnit: 'klbs',
+        series: [{ name: 'On bottom', cls: 's1', pts: sw.map(function (r) { return [r.hlOn / 1000, r.d]; }) }, { name: 'Off bottom', cls: 's3', pts: sw.map(function (r) { return [r.hlOff / 1000, r.d]; }) }] });
+      C.millTQ = chart({ id: pre + 'milltq', w: w, h: hM, title: 'Surface torque across the interval', sub: 'Rotating, with and without ' + k1(R.mill.wob) + ' klbs on the tool.', xl: 'Surface torque (ft-lb)', yl: 'Tool depth (ft MD)', down: true, x0: true, indep: 'y', indepLabel: 'Depth', indepUnit: 'ft', depUnit: 'ft-lb',
+        series: [{ name: 'On bottom', cls: 's1', pts: sw.map(function (r) { return [r.tqOn, r.d]; }) }, { name: 'Off bottom', cls: 's3', pts: sw.map(function (r) { return [r.tqOff, r.d]; }) }] });
+    }
+    var pt = R.pullTrans, hasJar = pt[0].jar != null, mx = pt[pt.length - 1].x / 1000;
+    var s4 = [{ name: 'Tension at fish', cls: 's1', pts: pt.map(function (r) { return [r.x / 1000, r.fish / 1000]; }) }];
+    if (hasJar) s4.push({ name: 'Tension at jar', cls: 's2', pts: pt.map(function (r) { return [r.x / 1000, r.jar / 1000]; }) });
+    s4.push({ name: 'No friction loss', cls: 'sn', dash: 1, pts: [[0, 0], [mx, mx]] });
+    C.pull = chart({ id: pre + 'pull', w: w, h: hT, title: 'Overpull reaching the fish', sub: 'String latched, pulling above pick-up weight.', xl: 'Overpull at surface (klbs)', yl: 'Tension downhole (klbs)', x0: true, y0: true, indep: 'x', indepLabel: 'Overpull', indepUnit: 'klbs', depUnit: 'klbs', series: s4,
+      marks: R.pullPlan ? [{ x: R.pullPlan.x / 1000, y: R.pullPlan.fish / 1000, cls: 's1', label: 'Planned: ' + k1(R.pullPlan.fish) + ' klbs at fish' }] : [] });
+    var dt = R.downTrans, mx2 = dt[dt.length - 1].x / 1000, s5 = [{ name: 'Compression at fish', cls: 's1', pts: dt.map(function (r) { return [r.x / 1000, r.fish / 1000]; }) }];
+    if (hasJar) s5.push({ name: 'Compression at jar', cls: 's2', pts: dt.map(function (r) { return [r.x / 1000, r.jar / 1000]; }) });
+    s5.push({ name: 'No friction loss', cls: 'sn', dash: 1, pts: [[0, 0], [mx2, mx2]] });
+    C.down = chart({ id: pre + 'down', w: w, h: hT, title: 'Set-down weight reaching the fish', sub: 'String latched, slacking off below slack-off weight.', xl: 'Set-down at surface (klbs)', yl: 'Compression downhole (klbs)', x0: true, y0: true, indep: 'x', indepLabel: 'Set-down', indepUnit: 'klbs', depUnit: 'klbs', series: s5,
+      marks: R.downPlan ? [{ x: R.downPlan.x / 1000, y: R.downPlan.fish / 1000, cls: 's1', label: 'Planned: ' + k1(R.downPlan.fish) + ' klbs at fish' }] : [] });
+    C.path = pathChart(pre, w, hD);
+    return C;
+  }
+  function pathChart(pre, w, h) {
+    var tr = R.traj; if (!tr) return '';
+    function dep(p) { return Math.sqrt(p.n * p.n + p.e * p.e); }
+    var end = Math.max(tr.td, R.D || 0), all = [], str = [], N = 120, marks = [];
+    for (var i = 0; i <= N; i++) { var p = TD.trajAt(tr, end * i / N); all.push([dep(p), p.tvd]); }
+    if (R.D) { for (i = 0; i <= N; i++) { p = TD.trajAt(tr, R.D * i / N); str.push([dep(p), p.tvd]); } marks.push({ x: str[N][0], y: str[N][1], cls: 's1', label: 'String bottom ' + n0(R.D) + ' ft MD' }); }
+    (R.secs || []).forEach(function (s) { if (s.cased && s.bottom < end + 1) { var q = TD.trajAt(tr, s.bottom); marks.push({ x: dep(q), y: q.tvd, cls: 'sn', label: 'Shoe ' + n0(s.bottom) + ' ft', dy: -8 }); } });
+    return chart({ id: pre + 'path', w: w, h: h || Math.round(w * 0.7), title: 'Well path', sub: 'Vertical depth against horizontal departure. Not to scale.', xl: 'Horizontal departure (ft)', yl: 'True vertical depth (ft)', down: true, x0: true, y0: true, noHover: true,
+      series: [{ name: 'Well path', cls: 'sn', noDot: 1, pts: all }].concat(str.length ? [{ name: 'String in hole', cls: 's1', noDot: 1, pts: str }] : []), marks: marks });
+  }
+
+  /* ---------- shared result blocks ---------- */
+  function pill(lvl, txt) { return '<span class="pill ' + lvl + '"><i>' + ({ ok: '✓', warn: '!', bad: '✕' }[lvl]) + '</i>' + esc(txt) + '</span>'; }
+  function kv(lab, val, unit, more) { return '<div><div class="lab">' + esc(lab) + '</div><div class="val">' + esc(val) + (unit ? '<small>' + esc(unit) + '</small>' : '') + '</div>' + (more ? '<div class="more">' + more + '</div>' : '') + '</div>'; }
+  function summary() {
+    var sens = num(S.settings.sens), h = '';
+    h += kv('Pick-up weight', k1(R.hlPU), 'klbs', sens ? esc(k1(R.hlPUlo) + ' to ' + k1(R.hlPUhi)) + ' with friction ±' + sens : '');
+    h += kv('Slack-off weight', k1(R.hlSO), 'klbs', sens ? esc(k1(R.hlSOhi) + ' to ' + k1(R.hlSOlo)) + ' with friction ±' + sens : '');
+    h += kv('Rotating weight', k1(R.hlROB), 'klbs', 'Off-bottom torque ' + n0(R.tqROB) + ' ft-lb');
+    h += kv('Maximum surface pull', R.maxPull.hl != null ? k1(R.maxPull.hl) : '–', 'klbs', R.maxPull.hl != null ? 'Limited by ' + esc(R.maxPull.limitedBy) + '. Margin over pick-up ' + k1(R.maxPull.mop) + ' klbs' : 'Enter yield or pull ratings');
+    if (R.pullPlan) h += kv('Planned overpull ' + k1(R.pullPlan.x) + ' klbs', k1(R.pullPlan.fish), 'klbs at fish', 'Indicator ' + k1(R.pullPlan.hl) + ' klbs. ' + Math.round(R.pullPlan.eff * 100) + '% reaches the fish');
+    if (R.downPlan) h += kv('Planned set-down ' + k1(R.downPlan.x) + ' klbs', k1(R.downPlan.fish), 'klbs at fish', 'Indicator ' + k1(R.downPlan.hl) + ' klbs. ' + Math.round(R.downPlan.eff * 100) + '% reaches the fish');
+    if (R.jar && R.jar.up) h += kv('Up-jar trip reading', k1(R.jar.up), 'klbs', 'Setting ' + k1(R.jar.upSet) + ' klbs at the jar');
+    if (R.jar && R.jar.down != null) h += kv('Down-jar trip reading', k1(R.jar.down), 'klbs', 'Setting ' + k1(R.jar.downSet) + ' klbs at the jar');
+    if (R.mill) h += kv('Milling with ' + k1(R.mill.wob) + ' klbs on the tool', n0(R.mill.tq), 'ft-lb at surface', 'Indicator ' + k1(R.mill.hl) + ' klbs. ' + n0(R.mill.tob) + ' ft-lb at the tool' + (R.mill.est ? ' (estimated)' : ''));
+    if (R.torque.target) h += kv('Surface torque for ' + n0(R.torque.target) + ' ft-lb at fish', n0(R.torque.surf), 'ft-lb', fx(R.torque.turns, 1) + ' turns of wind-up');
+    return '<div class="kv">' + h + '</div>';
+  }
+  function alerts() {
+    var w = R.warnings || [];
+    if (!w.length) return '<ul class="alerts"><li class="ok">' + pill('ok', 'Checks') + '<span>No limit, buckling or fit problems found with the entered data.</span></li></ul>';
+    return '<ul class="alerts">' + w.slice().sort(function (a, b) { return (a.lvl === 'bad' ? 0 : 1) - (b.lvl === 'bad' ? 0 : 1); }).map(function (x) { return '<li class="' + x.lvl + '">' + pill(x.lvl, x.lvl === 'bad' ? 'Action' : 'Caution') + '<span>' + esc(x.msg) + '</span></li>'; }).join('') + '</ul>';
+  }
+  function tblWeights() {
+    return '<div class="scroll"><table><thead><tr><th class="n">String depth (ft)</th><th class="n">Slack-off (klbs)</th><th class="n">Rotating (klbs)</th><th class="n">Pick-up (klbs)</th><th class="n">Off-bottom torque (ft-lb)</th></tr></thead><tbody>' +
+      R.broom.map(function (r) { return '<tr><td class="n">' + n0(r.d) + '</td><td class="n">' + k1(r.so) + '</td><td class="n">' + k1(r.rob) + '</td><td class="n">' + k1(r.pu) + '</td><td class="n">' + n0(r.tq) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function tblPull() {
+    var jar = R.pullTrans[0].jar != null;
+    return '<div class="scroll"><table><thead><tr><th class="n">Overpull at surface (klbs)</th><th class="n">Indicator (klbs)</th>' + (jar ? '<th class="n">Tension at jar (klbs)</th>' : '') + '<th class="n">Tension at fish (klbs)</th><th class="n">Reaches fish</th><th class="n">Added stretch (in)</th></tr></thead><tbody>' +
+      R.pullTrans.filter(function (r, i) { return i > 0 && i % 2 === 0; }).map(function (r) { return '<tr><td class="n">' + k1(r.x) + '</td><td class="n">' + k1(R.hlPU + r.x) + '</td>' + (jar ? '<td class="n">' + k1(r.jar) + '</td>' : '') + '<td class="n">' + k1(r.fish) + '</td><td class="n">' + Math.round(r.fish / r.x * 100) + '%</td><td class="n">' + fx(r.stretch, 1) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function tblDown() {
+    var jar = R.downTrans[0].jar != null, nm = ['None', 'Sinusoidal', 'Helical'];
+    return '<div class="scroll"><table><thead><tr><th class="n">Set-down at surface (klbs)</th><th class="n">Indicator (klbs)</th>' + (jar ? '<th class="n">Compression at jar (klbs)</th>' : '') + '<th class="n">Compression at fish (klbs)</th><th class="n">Reaches fish</th><th>Buckling</th></tr></thead><tbody>' +
+      R.downTrans.filter(function (r, i) { return i > 0 && i % 2 === 0; }).map(function (r) { return '<tr><td class="n">' + k1(r.x) + '</td><td class="n">' + k1(R.hlSO - r.x) + '</td>' + (jar ? '<td class="n">' + k1(r.jar) + '</td>' : '') + '<td class="n">' + k1(r.fish) + '</td><td class="n">' + Math.round(r.fish / r.x * 100) + '%</td><td>' + (r.st ? pill(r.st === 2 ? 'bad' : 'warn', nm[r.st] + ' from ' + n0(r.where) + ' ft') : nm[0]) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function blkJar() {
+    var J = R.jar; if (!J) return '<p class="note">No string item of type Jar, so no trip readings are calculated.</p>';
+    var h = '<p class="note">' + esc(J.name) + ', top at ' + n0(J.top) + ' ft MD, hole inclination ' + fx(J.inc, 0) + '°. Readings include block weight and assume the fish holds everything below the jar.' + (J.po ? ' Pump-open force ' + k1(J.po) + ' klbs included.' : ' Pumps off.') + '</p><div class="scroll"><table><thead><tr><th>Item</th><th class="n">Indicator reading (klbs)</th><th>How to read it</th></tr></thead><tbody>';
+    h += '<tr><td>String above jar, picking up</td><td class="n">' + k1(J.puAbove) + '</td><td>Jar starts to open</td></tr><tr><td>String above jar, slacking off</td><td class="n">' + k1(J.soAbove) + '</td><td>Jar starts to close</td></tr>';
+    if (J.up) h += '<tr><td><b>Up-jar trips</b> at ' + k1(J.upSet) + ' klbs setting</td><td class="n"><b>' + k1(J.up) + '</b></td><td>Pull to this reading and hold</td></tr>';
+    if (J.down != null) h += '<tr><td><b>Down-jar trips</b> at ' + k1(J.downSet) + ' klbs setting</td><td class="n"><b>' + k1(J.down) + '</b></td><td>Slack off to this reading</td></tr>';
+    return h + '</tbody></table></div>' + (!J.up && J.down == null ? '<p class="note">Enter the jar settings on the Operation tab to get trip readings.</p>' : '');
+  }
+  function blkTorque() {
+    var T = R.torque, h = '<p class="note">String latched at neutral weight and rotating slowly.</p><div class="scroll"><table><tbody>';
+    h += '<tr><td>Torque lost to wall friction, surface to fish</td><td class="n">' + n0(T.loss) + ' ft-lb</td></tr>';
+    if (T.target) h += '<tr><td><b>Surface torque for ' + n0(T.target) + ' ft-lb at the fish</b></td><td class="n"><b>' + n0(T.surf) + ' ft-lb</b></td></tr><tr><td>Wind-up at that torque</td><td class="n">' + fx(T.turns, 1) + ' turns</td></tr>';
+    if (T.maxSurf != null) h += '<tr><td>Maximum allowable surface torque (' + esc(T.limitedBy) + ')</td><td class="n">' + n0(T.maxSurf) + ' ft-lb</td></tr><tr><td>Largest torque that can reach the fish</td><td class="n">' + n0(T.maxAtFish) + ' ft-lb</td></tr><tr><td>Wind-up at maximum torque</td><td class="n">' + fx(T.turnsMax, 1) + ' turns</td></tr>';
+    else h += '<tr><td>Maximum allowable surface torque</td><td class="n">Enter yield or torque ratings</td></tr>';
+    if (R.comb) h += '<tr><td>Picking up at ' + n0(R.comb.va) + ' ft/min while rotating ' + n0(R.comb.rpm) + ' rpm</td><td class="n">' + k1(R.comb.hlPU) + ' klbs, ' + n0(R.comb.tqPU) + ' ft-lb</td></tr><tr><td>Slacking off at ' + n0(R.comb.va) + ' ft/min while rotating ' + n0(R.comb.rpm) + ' rpm</td><td class="n">' + k1(R.comb.hlSO) + ' klbs, ' + n0(R.comb.tqSO) + ' ft-lb</td></tr>';
+    return h + '</tbody></table></div>' + (T.unrated ? '<p class="note">Some items have no torque rating entered and are not part of the torque limit.</p>' : '');
+  }
+  function blkExtra() {
+    var h = '';
+    if (R.backoff) h += '<h3>Back-off at ' + n0(R.backoff.depth) + ' ft MD</h3><div class="scroll"><table><tbody><tr><td>Neutral point at the connection after working torque down</td><td class="n">' + k1(R.backoff.neutral) + ' klbs</td></tr><tr><td>Neutral point if approached by picking up</td><td class="n">' + k1(R.backoff.fromPU) + ' klbs</td></tr><tr><td>Neutral point if approached by slacking off</td><td class="n">' + k1(R.backoff.fromSO) + ' klbs</td></tr></tbody></table></div>';
+    if (R.stuck) h += '<h3>Stuck point from stretch</h3><div class="scroll"><table><tbody><tr><td>Pull difference and stretch</td><td class="n">' + k1(R.stuck.dF) + ' klbs, ' + fx(R.stuck.de, 1) + ' in</td></tr><tr><td><b>Stuck point with drag correction</b></td><td class="n"><b>' + (R.stuck.beyond ? 'Below string depth' : n0(R.stuck.model) + ' ft MD') + '</b></td></tr><tr><td>Handbook formula (vertical well, top pipe size only)</td><td class="n">' + n0(R.stuck.handbook) + ' ft</td></tr></tbody></table></div><p class="note">Use as a starting depth for a wireline free-point tool.</p>';
+    if (R.cal) {
+      var c = R.cal; h += '<h3>Friction calibration</h3><div class="scroll"><table><tbody>';
+      if (c.robDiff != null) h += '<tr><td>Measured rotating weight against model</td><td class="n">' + (c.robDiff >= 0 ? '+' : '') + k1(c.robDiff) + ' klbs</td></tr>';
+      if (c.measPU) h += '<tr><td>Friction multiplier that matches pick-up weight</td><td class="n">' + (c.kPU == null ? 'No match' : fx(c.kPU, 2)) + '</td></tr>';
+      if (c.measSO) h += '<tr><td>Friction multiplier that matches slack-off weight</td><td class="n">' + (c.kSO == null ? 'No match' : fx(c.kSO, 2)) + '</td></tr>';
+      h += '</tbody></table></div>';
+    }
+    return h;
+  }
+  function blkMill() {
+    var M = R.mill; if (!M) return '<p class="note">Enter a weight on the mill or shoe on the Operation tab to calculate the milling or washover case.</p>';
+    var bn = ['None', 'Sinusoidal', 'Helical'], h = '<div class="scroll"><table><tbody>';
+    function row(a, b) { h += '<tr><td>' + a + '</td><td class="n">' + b + '</td></tr>'; }
+    row('Tool at the bottom', esc(M.tool) + ', cutting face ' + fx(M.cutOD, 3) + ' x ' + fx(M.cutID, 3) + ' in');
+    row('Weight on the tool', k1(M.wob) + ' klbs');
+    row('Torque at the tool' + (M.est ? ' (estimated, coefficient ' + fx(M.muCut, 2) + ')' : ' (entered)'), n0(M.tob) + ' ft-lb');
+    if (M.muImplied != null) row('Cutting friction coefficient implied by that torque', fx(M.muImplied, 2));
+    row('<b>Indicator reading on bottom</b>', '<b>' + k1(M.hl) + ' klbs</b>');
+    row('Indicator reading rotating off bottom', k1(R.hlROB) + ' klbs');
+    row('<b>Surface torque on bottom</b>', '<b>' + n0(M.tq) + ' ft-lb</b>');
+    row('of which wall friction along the string', n0(M.frictionTq) + ' ft-lb');
+    row('Surface torque rotating off bottom', n0(R.tqROB) + ' ft-lb');
+    row('Torque margin to the limit' + (M.tqLimitedBy ? ' (' + esc(M.tqLimitedBy) + ')' : ''), M.tqMargin == null ? 'Enter yield or torque ratings' : (M.tqMargin < 0 ? pill('bad', n0(M.tqMargin) + ' ft-lb') : n0(M.tqMargin) + ' ft-lb'));
+    row('Wind-up at this torque', fx(M.turns, 1) + ' turns');
+    if (M.neutral) row('Neutral point', M.neutral.type === 'none' ? 'Whole string in compression' : n0(M.neutral.depth) + ' ft MD, in ' + esc(M.neutral.name));
+    row('Buckling at this weight', M.buck ? pill(M.buck === 2 ? 'bad' : 'warn', bn[M.buck] + ', ' + n0(M.buckFrom) + ' to ' + n0(M.buckTo) + ' ft') : 'None');
+    row('Weight at which buckling starts', k1(M.wobSin) + ' klbs, at ' + n0(M.wobSinAt) + ' ft in ' + esc(M.sinItem));
+    row('Weight at which helical buckling starts', k1(M.wobHel) + ' klbs, at ' + n0(M.wobHelAt) + ' ft');
+    h += '</tbody></table></div><p class="note">Rotating string, so wall friction acts as torque and the full weight reaches the tool. Buckling limits are for a smooth hole without rotation effects; treat them as warnings.' + (M.tqUnrated ? ' Items without a torque rating are not in the torque margin.' : '') + '</p>';
+    if (M.sweep.length > 1) h += '<div class="scroll"><table><thead><tr><th class="n">Tool depth (ft MD)</th><th class="n">Indicator on bottom (klbs)</th><th class="n">Indicator off bottom (klbs)</th><th class="n">Torque on bottom (ft-lb)</th><th class="n">Torque off bottom (ft-lb)</th></tr></thead><tbody>' +
+      M.sweep.map(function (r) { return '<tr><td class="n">' + n0(r.d) + '</td><td class="n">' + k1(r.hlOn) + '</td><td class="n">' + k1(r.hlOff) + '</td><td class="n">' + n0(r.tqOn) + '</td><td class="n">' + n0(r.tqOff) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    return h;
+  }
+  function blkWash() {
+    var F = R.wash; if (!F) return '';
+    if (F.none) return '<p class="note">A fish OD is entered but the string has no item of type Washover pipe, so the washover fit is not checked.</p>';
+    var h = '<div class="scroll"><table><tbody>';
+    function row(a, b) { h += '<tr><td>' + a + '</td><td class="n">' + b + '</td></tr>'; }
+    row('Washover pipe', fx(F.wpLen, 0) + ' ft, ' + fx(F.wpOD, 3) + ' in OD x ' + fx(F.wpID, 3) + ' in ID');
+    row('Smallest ID the fish must enter', fx(F.minID, 3) + ' in (' + esc(F.minItem) + ')');
+    if (F.fishOD) row('Clearance over the fish, on diameter (' + fx(F.fishOD, 3) + ' in OD)', F.idClear <= 0 ? pill('bad', 'Does not fit') : (F.idClear < 0.25 ? pill('warn', fx(F.idClear, 3) + ' in, under 1/4 in') : pill('ok', fx(F.idClear, 3) + ' in')));
+    else row('Clearance over the fish', 'Enter the largest fish OD');
+    row('Clearance to the hole, on diameter (' + fx(F.hole, 3) + ' in ID)', F.odClear <= 0 ? pill('bad', 'Does not fit') : (F.odClear < 0.25 ? pill('warn', fx(F.odClear, 3) + ' in, under 1/4 in') : pill('ok', fx(F.odClear, 3) + ' in')));
+    if (F.len) row('Planned interval against washover pipe length', F.len > F.wpLen + 0.5 ? pill('warn', n0(F.len) + ' ft planned, ' + n0(F.wpLen) + ' ft of pipe') : pill('ok', n0(F.len) + ' ft planned, ' + n0(F.wpLen) + ' ft of pipe'));
+    row('Largest dogleg the washover pipe sits in or will reach', fx(F.maxDls, 2) + ' deg/100 ft');
+    var lim = Math.min(F.rigidOuter == null ? Infinity : F.rigidOuter, F.rigidInner == null ? Infinity : F.rigidInner);
+    if (F.rigidOuter != null) row('Length that passes that dogleg without bending, hole side', fx(F.rigidOuter, 0) + ' ft');
+    if (F.rigidInner != null) row('Length that swallows the fish there without bending', fx(F.rigidInner, 0) + ' ft');
+    if (isFinite(lim)) row('Result', F.wpLen > lim ? 'The washover pipe has to bend. Check its bending stress and side force in the stiffness table.' : 'The washover pipe passes without bending.');
+    return h + '</tbody></table></div><p class="note">Fishing practice prefers about 1/4 in. clearance over the fish and 1/2 in. to the hole (1/4 in. in hard formation). The no-bending lengths are geometry only and assume the fish follows the hole and can centre inside the pipe.</p>';
+  }
+  function stiffLine() {
+    var s = R.stiff; if (!s) return '';
+    if (!s.on) return '<p class="note">' + (s.failed ? 'The beam model did not converge; soft-string forces are shown.' : (S.settings.stiff === 'off' ? 'BHA stiffness is switched off: soft-string forces only.' : 'The string has no BHA below the work string, so no stiffness model is needed.')) + '</p>';
+    return '<p class="note">Beam model active from ' + n0(s.zoneTop) + ' ft to the bottom of the string. Compared with soft-string, stiffness changes pick-up weight by ' + (s.addPU >= 0 ? '+' : '') + k1(s.addPU) + ' klbs, slack-off weight by ' + (s.addSO >= 0 ? '+' : '') + k1(s.addSO) + ' klbs and off-bottom torque by ' + (s.addTq >= 0 ? '+' : '') + n0(s.addTq) + ' ft-lb at this depth.</p>';
+  }
+  function tblBha() {
+    return '<div class="scroll"><table><thead><tr><th>Item</th><th class="n">Top to bottom (ft MD)</th><th class="n">Hole angle (deg)</th><th class="n">Max dogleg (deg/100 ft)</th><th class="n">Rigid-pass limit (deg/100 ft)</th><th class="n">Clearance on diameter (in)</th><th class="n">Bending stress (psi)</th><th class="n">Side force, soft-string (lb)</th><th class="n">Side force, beam model (lb)</th><th class="n">Weight along hole (klbs)</th><th class="n">Set-down weight it adds (klbs)</th><th>Status</th></tr></thead><tbody>' +
+      R.bha.map(function (r) { return '<tr><td>' + esc(r.name) + '</td><td class="n">' + n0(r.top) + ' to ' + n0(r.bot) + '</td><td class="n">' + fx(r.incLo, 0) + (Math.round(r.incHi) !== Math.round(r.incLo) ? ' to ' + fx(r.incHi, 0) : '') + '</td><td class="n">' + fx(r.maxDls, 1) + '</td><td class="n">' + (r.type === 'dp' ? '–' : fx(r.rigidDls, 1)) + '</td><td class="n">' + (ok(r.clear) ? fx(r.clear, 2) : '–') + '</td><td class="n">' + n0(r.bend) + '</td><td class="n">' + n0(r.sfSoft) + '</td><td class="n">' + (r.sfBeam == null ? '–' : n0(r.sfBeam)) + '</td><td class="n">' + k1(r.wAx) + '</td><td class="n">' + k1(r.usable) + '</td><td>' + pill(r.flag, r.flag === 'ok' ? 'OK' : r.note) + '</td></tr>'; }).join('') + '</tbody></table></div>' + stiffLine() +
+      '<p class="note">Side forces are for the string rotating off bottom. Set-down weight it adds = weight along the hole minus friction from its own weight on the low side. A negative value means the item costs more drag than the weight it gives, which happens at high angle.</p>';
+  }
+  function tblString() {
+    return '<div class="scroll"><table><thead><tr><th class="n">#</th><th>Item</th><th class="n">OD (in)</th><th class="n">ID (in)</th><th class="n">Length (ft)</th><th class="n">Top (ft MD)</th><th class="n">Weight (lb/ft)</th><th class="n">Buoyed (lb/ft)</th><th class="n">Allowable pull (klbs)</th></tr></thead><tbody>' +
+      R.spans.map(function (s) { var p = R.props[s.i], c = R.comps[s.i]; return '<tr><td class="n">' + (s.i + 1) + '</td><td>' + esc(c.name) + '</td><td class="n">' + fx(p.od, 3) + '</td><td class="n">' + fx(p.id, 3) + '</td><td class="n">' + fx(s.bot - s.top, 1) + '</td><td class="n">' + n0(s.top) + '</td><td class="n">' + fx(p.wt, 2) + '</td><td class="n">' + fx(p.wb, 2) + '</td><td class="n">' + (p.rated ? k1(p.tens / (num(S.settings.dfTension) || 1.1)) : 'not entered') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function trajLine() {
+    var t = R.traj, b = R.bottom;
+    return (R.trajSource === 'survey' ? 'Directional survey, ' + t.st.length + ' stations' : 'Planned profile, no survey') + '. Deepest station ' + n0(t.td) + ' ft MD. Maximum inclination ' + fx(t.maxInc, 1) + '°. Maximum dogleg ' + fx(t.maxDls, 2) + '°/100 ft.' + (b ? ' At string depth: ' + n0(b.tvd) + ' ft TVD, ' + fx(b.inc, 1) + '° inclination.' : '');
+  }
+
+  /* ---------- dynamic rendering ---------- */
+  function mainW() { var m = $('main'); return Math.max(280, (m.clientWidth || 360) - 32); }
+  function tabBadges() {
+    var svOk = S.traj.mode === 'survey' ? parseSurvey(S.traj.surveyText).length >= 2 : num(S.traj.profile.td) > 0;
+    var done = { job: !!S.job.well, path: svOk, wellbore: S.secs.some(function (s) { return num(s.bottom) > num(s.top) && num(s.id) > 0; }) && num(S.fluid.mwOut) > 0, string: S.comps.some(function (c) { return num(c.od) > 0; }), operation: num(S.op.depth) > 0 };
+    Object.keys(done).forEach(function (t) { var b = $('#tab-' + t); if (!b) return; var m = b.querySelector('i.tb'); if (!m) { m = document.createElement('i'); m.className = 'tb'; b.appendChild(m); } m.textContent = done[t] ? '✓' : '•'; m.className = 'tb ' + (done[t] ? 'ok' : 'todo'); m.title = done[t] ? 'Filled in' : 'Needs input'; });
+  }
+  function renderDynamic() {
+    tabBadges();
+    REG = {};
+    $('#case-name').textContent = (S.job.well || 'Untitled case') + (S.job.job ? ' · ' + S.job.job : '');
+    $('#banner').innerHTML = S.example ? '<div class="banner"><span><b>Example case.</b> The tool ratings and well data are made up. Replace every value with your own, or start blank.</span><button data-act="new-blank">Start a blank case</button></div>' : '';
+    var w = mainW(), cw = w >= 880 ? Math.floor((w - 16) / 2) - 34 : w - 34;
+    /* path tab */
+    var ps = $('#path-sum');
+    if (ps && R.traj) {
+      ps.innerHTML = '<p class="help">' + esc(trajLine()) + '</p>';
+      $('#path-chart').innerHTML = pathChart('in-', Math.min(w - 34, 720));
+      var st = R.traj.st; $('#path-table').innerHTML = '<table><thead><tr><th class="n">MD (ft)</th><th class="n">Inc (deg)</th><th class="n">Azi (deg)</th><th class="n">TVD (ft)</th><th class="n">North (ft)</th><th class="n">East (ft)</th><th class="n">Dogleg (deg/100 ft)</th></tr></thead><tbody>' + st.slice(0, 400).map(function (s) { return '<tr><td class="n">' + fx(s.md, 1) + '</td><td class="n">' + fx(s.inc, 2) + '</td><td class="n">' + fx(s.azi, 2) + '</td><td class="n">' + fx(s.tvd, 1) + '</td><td class="n">' + fx(s.n, 1) + '</td><td class="n">' + fx(s.e, 1) + '</td><td class="n">' + fx(s.dls, 2) + '</td></tr>'; }).join('') + '</tbody></table>' + (st.length > 400 ? '<p class="hint">First 400 of ' + st.length + ' stations shown.</p>' : '');
+    }
+    var res = $('#p-results'), rep = $('#p-report');
+    if (R.error) {
+      res.innerHTML = '<div class="card"><h2>Results</h2><ul class="alerts"><li class="bad">' + pill('bad', 'Missing input') + '<span>' + esc(R.error) + '</span></li></ul></div>';
+      rep.innerHTML = res.innerHTML; $('#p-simple').innerHTML = res.innerHTML; var ss0 = $('#string-sum'); if (ss0) ss0.innerHTML = ''; return;
+    }
+    var ss = $('#string-sum');
+    if (ss) { var bha = 0, bw = 0; R.spans.forEach(function (s, i) { if (i < R.spans.length - 1) { bha += s.bot - s.top; bw += R.props[s.i].wb * (s.bot - s.top); } }); ss.innerHTML = '<p class="help">BHA below the work string: ' + fx(bha, 1) + ' ft, ' + k1(bw) + ' klbs buoyed. Whole string in air: ' + k1(R.stringWeightAir) + ' klbs.</p>'; }
+    var co = $('#cal-out');
+    if (co) {
+      if (R.cal) {
+        co.innerHTML = blkExtraCal() + '<div class="row" style="margin-top:8px">' + (ok(R.cal.kPU) ? '<button data-act="apply-cal-pu:' + R.cal.kPU.toFixed(4) + '">Match pick-up: friction × ' + R.cal.kPU.toFixed(2) + '</button>' : '') + (ok(R.cal.kSO) ? '<button data-act="apply-cal-so:' + R.cal.kSO.toFixed(4) + '">Match slack-off: slack-off friction × ' + R.cal.kSO.toFixed(2) + '</button>' : '') + '</div><p class="hint" style="margin-top:6px">Fix any rotating-weight mismatch first: it points to block weight, fluid density or pipe weight, not friction. Pick-up sets the main friction factor (also used for torque); slack-off sets the slack-off friction factor.</p>';
+      } else co.innerHTML = '<p class="hint">Enter at least one measured weight to compare against the model.</p>';
+    }
+    var C = charts('r-', cw);
+    res.innerHTML =
+      (function () { var st = stateOf(); return '<div class="srst ' + st[0] + '" style="background:var(--surface);margin:0">' + pill(st[0], st[1]) + '<span>' + st[2] + ' <a href="#simple" data-tab="simple">Make the PDF report</a></span></div>'; })() +
+      '<div class="card"><h2>Summary at ' + n0(R.D) + ' ft MD</h2><p class="help">' + esc(trajLine()) + '</p>' + summary() + '</div>' +
+      '<div class="card"><h2>Checks</h2>' + alerts() + '</div>' +
+      '<div class="charts"><div class="card">' + C.broom + '<details><summary>Table of expected weights</summary>' + tblWeights() + '</details></div><div class="card">' + C.tension + '</div><div class="card">' + C.side + '</div><div class="card">' + C.torque + '</div></div>' +
+      '<div class="charts"><div class="card">' + C.pull + '<details open><summary>Table</summary>' + tblPull() + '</details></div><div class="card">' + C.down + '<details open><summary>Table</summary>' + tblDown() + '</details></div></div>' +
+      '<div class="charts"><div class="card"><h2>Jar trip readings</h2>' + blkJar() + '</div><div class="card"><h2>Torque and wind-up</h2>' + blkTorque() + '</div></div>' +
+      '<div class="card"><h2>Milling and washover</h2>' + (C.millHL ? '<div class="charts" style="margin-bottom:10px">' + C.millHL + C.millTQ + '</div>' : '') + blkMill() + (R.wash ? '<h3 style="margin:16px 0 6px;font-size:15px">Washover fit</h3>' + blkWash() : '') + '</div>' +
+      (blkExtra() ? '<div class="card"><h2>Other fishing calculations</h2>' + blkExtra() + '</div>' : '') +
+      '<div class="card"><h2>BHA stiffness and weight placement</h2>' + tblBha() + '</div>';
+    $('#p-simple').innerHTML = '<div class="card"><h2>Make the PDF report</h2><p class="help">Three pages: a summary for the rig, the charts, and the details. Fill the Job tab first so the header and signature names are right.</p><div class="row" style="align-items:flex-end"><label class="fld" for="f-settings-lang" style="max-width:220px"><span>Report language</span><select id="f-settings-lang" data-k="settings.lang" data-re="1"><option value="en"' + (S.settings.lang !== 'id' ? ' selected' : '') + '>English</option><option value="id"' + (S.settings.lang === 'id' ? ' selected' : '') + '>Bahasa Indonesia</option></select></label><button class="pri" data-act="pdf">Download PDF report</button></div></div><p class="hint">Preview of page 1</p>' + simpleHTML(Math.min(w - 62, 760));
+    rep.innerHTML = '<div class="bar">' + (framed ? '' : '<button class="pri" data-act="print">Print or save as PDF</button>') + '<button' + (framed ? ' class="pri"' : '') + ' data-act="dl-report">Download report (.html)</button><button data-act="save-case">Save case (.json)</button></div>' +
+      (framed ? '<p class="hint">To get a PDF: download the report, open it in your browser, and print it to PDF.</p>' : '') + reportHTML(Math.min(w - 62, 760));
+  }
+  function blkExtraCal() {
+    var c = R.cal, h = '<div class="scroll"><table><tbody>';
+    if (c.robDiff != null) h += '<tr><td>Measured rotating weight minus model</td><td class="n">' + (c.robDiff >= 0 ? '+' : '') + k1(c.robDiff) + ' klbs</td></tr>';
+    if (c.measPU) h += '<tr><td>Friction multiplier that matches pick-up weight</td><td class="n">' + (c.kPU == null ? 'No match between 0 and 4' : fx(c.kPU, 2)) + '</td></tr>';
+    if (c.measSO) h += '<tr><td>Friction multiplier that matches slack-off weight</td><td class="n">' + (c.kSO == null ? 'No match between 0 and 4' : fx(c.kSO, 2)) + '</td></tr>';
+    return h + '</tbody></table></div>';
+  }
+
+  /* ---------- simple report (Bahasa Indonesia, one page) ---------- */
+  var TR = [
+    [/^No survey entered\..*/, 'Tidak ada data survey. Hasil memakai profil rencana, jadi drag dan torsi sebenarnya kemungkinan lebih besar.'],
+    [/^No pull rating entered for: (.*)\. These items.*/, 'Rating tarik belum diisi untuk: $1. Alat ini belum ikut dicek untuk tarikan maksimum.'],
+    [/^Helical buckling predicted while slacking off between (\d+) and (\d+) ft\./, 'Pipa diperkirakan buckling heliks saat slack-off di $1–$2 ft. Kurangi set-down weight.'],
+    [/^Sinusoidal buckling predicted while slacking off between (\d+) and (\d+) ft\./, 'Pipa mulai melengkung (buckling sinusoidal) saat slack-off di $1–$2 ft.'],
+    [/^Slack-off calculation locks up.*/, 'String tidak bisa turun ke kedalaman ini dengan friction factor yang diisi (lock-up).'],
+    [/^Pick-up weight already exceeds the allowable pull \((.*)\)\./, 'Berat pick-up sudah melebihi tarikan aman ($1).'],
+    [/^The up-jar trip reading exceeds.*/, 'Bacaan indikator untuk trip jar ke atas melebihi tarikan maksimum aman.'],
+    [/^Not enough string weight above the jar.*/, 'Berat string di atas jar tidak cukup untuk trip jar ke bawah.'],
+    [/^Surface torque needed for the target torque at the fish exceeds the allowable torque \((.*)\)\./, 'Torsi permukaan yang dibutuhkan melebihi batas torsi ($1).'],
+    [/^The string is not heavy enough to put (\d+) klbs.*/, 'String tidak cukup berat untuk memberi $1 klbs ke mill atau shoe.'],
+    [/^Milling torque exceeds the allowable torque \((.*)\)\./, 'Torsi milling melebihi batas torsi ($1).'],
+    [/^Helical buckling predicted while milling with this weight, between (\d+) and (\d+) ft\./, 'Dengan berat milling ini pipa buckling heliks di $1–$2 ft. Kurangi berat di mill.'],
+    [/^Sinusoidal buckling predicted while milling with this weight, between (\d+) and (\d+) ft\./, 'Dengan berat milling ini pipa mulai melengkung di $1–$2 ft.'],
+    [/^With this weight the neutral point is in the work string at (\d+) ft.*/, 'Dengan berat ini titik netral ada di drill pipe ($1 ft), bukan di BHA. Pipa di bawahnya tertekan.'],
+    [/^The fish \((.*)\) will not enter (.*) \((.*)\)\./, 'Fish ($1 OD) tidak bisa masuk ke $2 ($3 ID).'],
+    [/^Clearance between fish and washover ID is (.*) in\..*/, 'Celah antara fish dan ID washpipe hanya $1 in (di bawah 1/4 in).'],
+    [/^Clearance between washover pipe and hole is (.*) in\..*/, 'Celah antara washpipe dan lubang hanya $1 in.'],
+    [/^Planned washover interval \((.*) ft\) is longer than the washover pipe \((.*) ft\)\./, 'Interval washover ($1 ft) lebih panjang dari washpipe ($2 ft).'],
+    [/^Stiff BHA items must bend.*/, 'BHA kaku harus melengkung di dogleg; drag sebenarnya bisa lebih besar.'],
+    [/^The BHA beam model did not converge.*/, 'Model kekakuan BHA tidak konvergen; dipakai hasil soft-string.'],
+    [/^The BHA is longer than 1,500 ft.*/, 'BHA lebih dari 1,500 ft; kekakuan hanya dihitung untuk 1,500 ft terbawah.'],
+    [/^String depth (\d+) ft is below the deepest wellbore section \((\d+) ft\)\..*/, 'Kedalaman string $1 ft lebih dalam dari section lubang terdalam ($2 ft).'],
+    [/^String depth is below the last survey station \((\d+) ft\)\..*/, 'Kedalaman string di bawah stasiun survey terakhir ($1 ft).'],
+    [/^Fluid density is zero.*/, 'Densitas fluida nol: string dihitung seperti di udara.'],
+    [/^(.*): OD (.*) in\. does not fit in (.*) in\. hole\./, '$1: OD $2 in tidak muat di lubang $3 in.']
+  ];
+  function idn(msg) { for (var i = 0; i < TR.length; i++) if (TR[i][0].test(msg)) return msg.replace(TR[i][0], TR[i][1]); return msg; }
+  function stateOf() {
+    var id = (S.settings.lang || 'en') === 'id', T = function (en, ind) { return id ? ind : en; }, ws = R.warnings || [], bad = ws.filter(function (x) { return x.lvl === 'bad'; }), warn = ws.filter(function (x) { return x.lvl !== 'bad'; });
+    return bad.length ? ['bad', T('DANGER', 'BAHAYA'), T('A limit is exceeded. Read the list below before starting.', 'Ada batas yang terlampaui. Baca daftar di bawah sebelum mulai.')] : warn.length ? ['warn', T('CHECK', 'PERHATIAN'), T('The job can go ahead, but some items need checking.', 'Operasi bisa jalan, tapi ada hal yang perlu dicek.')] : ['ok', T('SAFE', 'AMAN'), T('No limit is exceeded with the data entered.', 'Tidak ada batas yang terlampaui dengan data yang diisi.')];
+  }
+  function simpleHTML(w) {
+    var id = (S.settings.lang || 'en') === 'id', T = function (en, ind) { return id ? ind : en; };
+    var J = S.job, C = charts('s-', Math.min(w, 620)), ws = R.warnings || [], bad = ws.filter(function (x) { return x.lvl === 'bad'; }), warn = ws.filter(function (x) { return x.lvl !== 'bad'; }), st = stateOf();
+    function tile(lab, val, unit, mean) { return '<div><div class="lab">' + esc(lab) + '</div><div class="val">' + esc(val) + '<small>' + esc(unit) + '</small></div><div class="more">' + esc(mean) + '</div></div>'; }
+    var h = '<article class="rp sr" id="simple-report"><div class="rhead"><div><small>' + T('Torque & drag report', 'Laporan torque & drag') + '</small><h1>' + esc(J.well || T('Well', 'Sumur')) + '</h1></div><div><small>' + T('Date', 'Tanggal') + '</small><b>' + esc(J.date || today()) + '</b></div></div>';
+    h += '<div class="meta"><div><span>' + T('Job', 'Pekerjaan') + '</span><b>' + esc(J.job || '–') + '</b></div><div><span>' + T('String depth', 'Kedalaman string') + '</span><b>' + n0(R.D) + ' ft MD</b></div><div><span>' + T('Hole angle at bottom', 'Inklinasi di dasar') + '</span><b>' + fx(R.bottom.inc, 0) + '°</b></div><div><span>' + T('Fluid', 'Fluida') + '</span><b>' + esc(S.fluid.mwOut || '0') + ' ppg</b></div></div>';
+    h += '<div class="srst ' + st[0] + '">' + pill(st[0], st[1]) + '<span>' + st[2] + '</span></div>';
+    h += '<h2>' + T('Numbers for the rig', 'Angka untuk di rig') + '</h2><div class="kv">';
+    h += tile(T('Pick-up weight', 'Berat angkat (pick-up)'), k1(R.hlPU), 'klbs', 'Normal ' + k1(R.hlPUlo) + '–' + k1(R.hlPUhi) + T(' klbs. Much higher means the hole is getting tight.', ' klbs. Jauh di atas ini berarti lubang mulai ketat.'));
+    h += tile(T('Slack-off weight', 'Berat turun (slack-off)'), k1(R.hlSO), 'klbs', 'Normal ' + k1(R.hlSOhi) + '–' + k1(R.hlSOlo) + T(' klbs. Much lower means the string is held up.', ' klbs. Jauh di bawah ini berarti string tertahan.'));
+    h += tile(T('Rotating weight', 'Berat saat diputar'), k1(R.hlROB), 'klbs', T('Weight with no drag. Use it to check the indicator.', 'Berat tanpa gesekan. Pakai untuk cek indikator.'));
+    h += tile(T('Rotating torque, off bottom', 'Torsi diputar, di atas dasar'), n0(R.tqROB), 'ft-lb', T('Normal torque while rotating off bottom.', 'Torsi normal saat berputar di atas dasar.'));
+    if (R.maxPull.hl != null) h += tile(T('Maximum safe pull', 'Tarikan maksimum aman'), k1(R.maxPull.hl), 'klbs', T('Do not pull above this. Limited by ', 'Jangan tarik di atas ini. Dibatasi oleh ') + R.maxPull.limitedBy + '.');
+    if (R.pullPlan) h += tile(T('Overpull ', 'Overpull ') + k1(R.pullPlan.x) + T(' klbs at the fish', ' klbs di fish'), k1(R.pullPlan.fish), 'klbs', T('Only ', 'Hanya ') + Math.round(R.pullPlan.eff * 100) + T('% reaches the fish; the rest is lost to friction.', '% sampai ke fish; sisanya hilang karena gesekan.'));
+    if (R.jar && R.jar.up) h += tile(T('Jar up: trips at indicator', 'Jar ke atas: trip di indikator'), k1(R.jar.up), 'klbs', T('Pull to this reading and hold.', 'Tarik sampai angka ini lalu tahan.'));
+    if (R.jar && R.jar.down != null) h += tile(T('Jar down: trips at indicator', 'Jar ke bawah: trip di indikator'), k1(R.jar.down), 'klbs', T('Slack off to this reading.', 'Turunkan sampai angka ini.'));
+    if (R.mill) h += tile(T('Milling with ', 'Milling dengan ') + k1(R.mill.wob) + ' klbs', n0(R.mill.tq), 'ft-lb', T('Indicator ', 'Indikator ') + k1(R.mill.hl) + T(' klbs on bottom.', ' klbs di dasar.'));
+    if (R.torque.target) h += tile(T('Torque for ', 'Torsi untuk ') + n0(R.torque.target) + T(' ft-lb at fish', ' ft-lb di fish'), n0(R.torque.surf), 'ft-lb', T('About ', 'Sekitar ') + fx(R.torque.turns, 1) + T(' turns of wind-up.', ' putaran wind-up.'));
+    h += '</div>';
+    var o = S.op, rows = [];
+    if (num(o.measPU)) rows.push([T('Pick-up', 'Angkat'), num(o.measPU) * 1000, R.hlPU]);
+    if (num(o.measSO)) rows.push([T('Slack-off', 'Turun'), num(o.measSO) * 1000, R.hlSO]);
+    if (num(o.measROB)) rows.push([T('Rotating', 'Diputar'), num(o.measROB) * 1000, R.hlROB]);
+    if (rows.length) {
+      h += '<h2>' + T('Actual against calculated', 'Aktual dibanding perhitungan') + '</h2><div class="scroll"><table><thead><tr><th>' + T('Reading', 'Bacaan') + '</th><th class="n">' + T('Actual', 'Aktual') + ' (klbs)</th><th class="n">' + T('Calculated', 'Perhitungan') + ' (klbs)</th><th class="n">' + T('Difference', 'Selisih') + ' (klbs)</th><th>' + T('Result', 'Hasil') + '</th></tr></thead><tbody>';
+      rows.forEach(function (r) { var d = r[1] - r[2], a = Math.abs(d) / 1000, s2 = a <= 3 ? ['ok', T('Match', 'Cocok')] : a <= 6 ? ['warn', T('Close', 'Cukup dekat')] : ['bad', T('Far off', 'Beda jauh')]; h += '<tr><td>' + r[0] + '</td><td class="n">' + k1(r[1]) + '</td><td class="n">' + k1(r[2]) + '</td><td class="n">' + (d >= 0 ? '+' : '') + k1(d) + '</td><td>' + pill(s2[0], s2[1]) + '</td></tr>'; });
+      h += '</tbody></table></div>';
+    }
+    var bro = C.broom;
+    if (id) bro = bro.replace(/Expected weights while running in/g, 'Berat indikator vs kedalaman').replace(/Indicator reading against string depth\. Block weight included\.( Dots: weights measured in the field \(DDR\)\.)?/, 'Titik = bacaan aktual.').replace('</b>Pick-up<', '</b>Angkat<').replace('</b>Slack-off<', '</b>Turun<').replace('</b>Rotating off bottom<', '</b>Diputar<').replace('</b>Friction factor', '</b>Rentang FF').replace('>Hookload (klbs)<', '>Berat indikator (klbs)<').replace('>String depth (ft MD)<', '>Kedalaman (ft MD)<');
+    h += '<h2>' + T('Weights against depth', 'Berat terhadap kedalaman') + '</h2>' + bro;
+    h += '<h2>' + T('What to check', 'Yang perlu dicek') + '</h2>' + (ws.length ? '<ul class="alerts">' + bad.concat(warn).map(function (x) { return '<li class="' + x.lvl + '">' + pill(x.lvl, x.lvl === 'bad' ? T('Danger', 'Bahaya') : T('Check', 'Cek')) + '<span>' + esc(id ? idn(x.msg) : x.msg) + '</span></li>'; }).join('') + '</ul>' : '<p>' + T('Nothing to report.', 'Tidak ada catatan.') + '</p>');
+    h += '<p class="note" style="margin-top:14px">' + T('The PDF also has a page of charts and a page of details: string, jar, torque, milling and BHA checks.', 'PDF juga berisi halaman grafik dan halaman detail: rangkaian, jar, torsi, milling dan pengecekan BHA.') + '</p></article>';
+    return h;
+  }
+  /* ---------- PDF report: a small PDF writer (Helvetica, vector charts), no external library ---------- */
+  var HW = {"r": {"32": 278, "33": 278, "34": 355, "35": 556, "36": 556, "37": 889, "38": 667, "39": 191, "40": 333, "41": 333, "42": 389, "43": 584, "44": 278, "45": 333, "46": 278, "47": 278, "48": 556, "49": 556, "50": 556, "51": 556, "52": 556, "53": 556, "54": 556, "55": 556, "56": 556, "57": 556, "58": 278, "59": 278, "60": 584, "61": 584, "62": 584, "63": 556, "64": 1015, "65": 667, "66": 667, "67": 722, "68": 722, "69": 667, "70": 611, "71": 778, "72": 722, "73": 278, "74": 500, "75": 667, "76": 556, "77": 833, "78": 722, "79": 778, "80": 667, "81": 778, "82": 722, "83": 667, "84": 611, "85": 722, "86": 667, "87": 944, "88": 667, "89": 667, "90": 611, "91": 278, "92": 278, "93": 278, "94": 469, "95": 556, "96": 333, "97": 556, "98": 556, "99": 500, "100": 556, "101": 556, "102": 278, "103": 556, "104": 556, "105": 222, "106": 222, "107": 500, "108": 222, "109": 833, "110": 556, "111": 556, "112": 556, "113": 556, "114": 333, "115": 500, "116": 278, "117": 556, "118": 500, "119": 722, "120": 500, "121": 500, "122": 500, "123": 334, "124": 260, "125": 334, "126": 584, "176": 400, "8211": 556, "177": 584, "183": 278, "215": 584, "8212": 1000, "8230": 1000, "8226": 350, "8217": 222, "8220": 333, "8221": 333, "8804": 549, "8805": 549}, "b": {"32": 278, "33": 333, "34": 474, "35": 556, "36": 556, "37": 889, "38": 722, "39": 238, "40": 333, "41": 333, "42": 389, "43": 584, "44": 278, "45": 333, "46": 278, "47": 278, "48": 556, "49": 556, "50": 556, "51": 556, "52": 556, "53": 556, "54": 556, "55": 556, "56": 556, "57": 556, "58": 333, "59": 333, "60": 584, "61": 584, "62": 584, "63": 611, "64": 975, "65": 722, "66": 722, "67": 722, "68": 722, "69": 667, "70": 611, "71": 778, "72": 722, "73": 278, "74": 556, "75": 722, "76": 611, "77": 833, "78": 722, "79": 778, "80": 667, "81": 778, "82": 722, "83": 667, "84": 611, "85": 722, "86": 667, "87": 944, "88": 667, "89": 667, "90": 611, "91": 333, "92": 278, "93": 333, "94": 584, "95": 556, "96": 333, "97": 556, "98": 611, "99": 556, "100": 611, "101": 556, "102": 333, "103": 611, "104": 611, "105": 278, "106": 278, "107": 556, "108": 278, "109": 889, "110": 611, "111": 611, "112": 611, "113": 611, "114": 389, "115": 556, "116": 333, "117": 611, "118": 556, "119": 778, "120": 556, "121": 556, "122": 500, "123": 389, "124": 280, "125": 389, "126": 584, "176": 400, "8211": 556, "177": 584, "183": 278, "215": 584, "8212": 1000, "8230": 1000, "8226": 350, "8217": 278, "8220": 500, "8221": 500, "8804": 549, "8805": 549}};
+
+  var WIN = { 8364: 128, 8218: 130, 8222: 132, 8230: 133, 8226: 149, 8211: 150, 8212: 151, 8216: 145, 8217: 146, 8220: 147, 8221: 148, 8482: 153 };
+  function pdfText(s) {
+    s = String(s == null ? '' : s).replace(/≤/g, '<=').replace(/≥/g, '>=').replace(/→/g, '->').replace(/✓/g, 'OK').replace(/✕/g, 'X').replace(/ | /g, ' ');
+    var o = '';
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i), b = c < 128 ? c : (c < 256 ? c : (WIN[c] || 63));
+      if (b === 40 || b === 41 || b === 92) o += '\\' + String.fromCharCode(b);
+      else if (b < 32 || b > 126) o += '\\' + ('00' + b.toString(8)).slice(-3);
+      else o += String.fromCharCode(b);
+    }
+    return o;
+  }
+  function PDF() {
+    var W = 595.28, H = 841.89, pages = [], cur = null, self = this;
+    self.W = W; self.H = H; self.M = 42; self.y = 0;
+    function f(n) { return (Math.round(n * 100) / 100).toString(); }
+    function col(c) { return f(c[0] / 255) + ' ' + f(c[1] / 255) + ' ' + f(c[2] / 255); }
+    self.add = function () { cur = []; pages.push(cur); self.y = self.M; return self; };
+    self.width = function (s, size, bold) { var t = HW[bold ? 'b' : 'r'], w = 0; s = String(s); for (var i = 0; i < s.length; i++) { var c = s.charCodeAt(i); w += t[c] || t[63] || 556; } return w * size / 1000; };
+    self.wrap = function (s, maxW, size, bold) {
+      var out = []; String(s).split('\n').forEach(function (para) {
+        var words = para.split(' '), line = '';
+        words.forEach(function (wd) { var t = line ? line + ' ' + wd : wd; if (self.width(t, size, bold) <= maxW || !line) line = t; else { out.push(line); line = wd; } });
+        out.push(line);
+      }); return out;
+    };
+    self.text = function (x, y, s, o) {
+      o = o || {}; var size = o.size || 9.5, bold = !!o.bold, w = self.width(s, size, bold);
+      if (o.align === 'right') x -= w; else if (o.align === 'center') x -= w / 2;
+      cur.push('BT ' + col(o.color || [20, 33, 42]) + ' rg /' + (bold ? 'F2' : 'F1') + ' ' + f(size) + ' Tf ' + f(x) + ' ' + f(H - y) + ' Td (' + pdfText(s) + ') Tj ET');
+      return w;
+    };
+    self.para = function (x, y, s, maxW, o) { o = o || {}; var size = o.size || 9.5, lh = o.lh || size * 1.35, ls = self.wrap(s, maxW, size, o.bold); ls.forEach(function (l, i) { self.text(x, y + i * lh, l, o); }); return ls.length * lh; };
+    self.line = function (x1, y1, x2, y2, o) { o = o || {}; cur.push('q ' + col(o.color || [210, 217, 222]) + ' RG ' + f(o.w || 0.6) + ' w ' + (o.dash ? '[' + o.dash.join(' ') + '] 0 d ' : '') + '1 J ' + f(x1) + ' ' + f(H - y1) + ' m ' + f(x2) + ' ' + f(H - y2) + ' l S Q'); };
+    self.rect = function (x, y, w, h, o) { o = o || {}; var op = o.fill && o.stroke ? 'B' : o.fill ? 'f' : 'S'; cur.push('q ' + (o.fill ? col(o.fill) + ' rg ' : '') + (o.stroke ? col(o.stroke) + ' RG ' + f(o.w || 0.6) + ' w ' : '') + f(x) + ' ' + f(H - y - h) + ' ' + f(w) + ' ' + f(h) + ' re ' + op + ' Q'); };
+    self.poly = function (pts, o) {
+      o = o || {}; if (pts.length < 2) return;
+      var p = pts.map(function (q, i) { return f(q[0]) + ' ' + f(H - q[1]) + (i ? ' l' : ' m'); }).join(' ');
+      if (o.fill) cur.push('q ' + col(o.fill) + ' rg ' + p + ' h f Q');
+      else cur.push('q ' + col(o.color || [0, 0, 0]) + ' RG ' + f(o.w || 1.4) + ' w 1 j 1 J ' + (o.dash ? '[' + o.dash.join(' ') + '] 0 d ' : '') + p + ' S Q');
+    };
+    self.dot = function (x, y, r, c) { var k = 0.5523 * r, Y = H - y; cur.push('q ' + col(c) + ' rg 1 1 1 RG 1 w ' + f(x + r) + ' ' + f(Y) + ' m ' + f(x + r) + ' ' + f(Y + k) + ' ' + f(x + k) + ' ' + f(Y + r) + ' ' + f(x) + ' ' + f(Y + r) + ' c ' + f(x - k) + ' ' + f(Y + r) + ' ' + f(x - r) + ' ' + f(Y + k) + ' ' + f(x - r) + ' ' + f(Y) + ' c ' + f(x - r) + ' ' + f(Y - k) + ' ' + f(x - k) + ' ' + f(Y - r) + ' ' + f(x) + ' ' + f(Y - r) + ' c ' + f(x + k) + ' ' + f(Y - r) + ' ' + f(x + r) + ' ' + f(Y - k) + ' ' + f(x + r) + ' ' + f(Y) + ' c B Q'); };
+    self.need = function (h) { if (self.y + h > H - self.M - 16) self.add(); };
+    self.pageCount = function () { return pages.length; };
+    self.onPage = function (i) { cur = pages[i]; };
+    self.bytes = function () {
+      var objs = [], N = pages.length, out = '%PDF-1.4\n%âãÏÓ\n', offs = [];
+      objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+      var kids = []; for (var i = 0; i < N; i++) kids.push((5 + 2 * i) + ' 0 R');
+      objs[2] = '<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + N + ' >>';
+      objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+      objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+      pages.forEach(function (pg, i) {
+        var st = pg.join('\n');
+        objs[5 + 2 * i] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + f(W) + ' ' + f(H) + '] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ' + (6 + 2 * i) + ' 0 R >>';
+        objs[6 + 2 * i] = '<< /Length ' + st.length + ' >>\nstream\n' + st + '\nendstream';
+      });
+      for (i = 1; i < objs.length; i++) { offs[i] = out.length; out += i + ' 0 obj\n' + objs[i] + '\nendobj\n'; }
+      var xr = out.length; out += 'xref\n0 ' + objs.length + '\n0000000000 65535 f \n';
+      for (i = 1; i < objs.length; i++) out += ('0000000000' + offs[i]).slice(-10) + ' 00000 n \n';
+      out += 'trailer\n<< /Size ' + objs.length + ' /Root 1 0 R >>\nstartxref\n' + xr + '\n%%EOF';
+      var u = new Uint8Array(out.length); for (i = 0; i < out.length; i++) u[i] = out.charCodeAt(i) & 255; return u;
+    };
+  }
+  var PC = { ink: [20, 33, 42], muted: [86, 100, 110], line: [210, 217, 222], soft: [238, 241, 243], accent: [11, 97, 119], s1: [42, 120, 214], s2: [235, 104, 52], s3: [27, 175, 122], grey: [140, 146, 150], good: [12, 163, 12], warn: [214, 150, 10], crit: [208, 59, 59] };
+  function tint(c, a) { return [255 - (255 - c[0]) * a, 255 - (255 - c[1]) * a, 255 - (255 - c[2]) * a]; }
+  function pdfChart(P, x, y, w, h, o) {
+    var xs = [], ys = [];
+    (o.series || []).forEach(function (s) { s.pts.forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    (o.bands || []).forEach(function (b) { b.lo.concat(b.hi).forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    (o.marks || []).forEach(function (m) { xs.push(m.x); ys.push(m.y); });
+    if (o.x0) xs.push(0); if (o.y0) ys.push(0); if (!xs.length) return;
+    var xt = ticks(Math.min.apply(null, xs), Math.max.apply(null, xs), 6), yt = ticks(Math.min.apply(null, ys), Math.max.apply(null, ys), 6);
+    var L = x + 44, R0 = x + w - 8, T = y + 4, B = y + h - 28, X0 = xt[0], X1 = xt[xt.length - 1], Y0 = yt[0], Y1 = yt[yt.length - 1];
+    function sx(v) { return L + (v - X0) / (X1 - X0) * (R0 - L); }
+    function sy(v) { return o.down ? T + (v - Y0) / (Y1 - Y0) * (B - T) : B - (v - Y0) / (Y1 - Y0) * (B - T); }
+    xt.forEach(function (v) { P.line(sx(v), T, sx(v), B, { color: [228, 232, 235], w: 0.5 }); P.text(sx(v), B + 11, tl(v), { size: 7.5, color: PC.muted, align: 'center' }); });
+    yt.forEach(function (v) { P.line(L, sy(v), R0, sy(v), { color: [228, 232, 235], w: 0.5 }); P.text(L - 4, sy(v) + 2.5, tl(v), { size: 7.5, color: PC.muted, align: 'right' }); });
+    P.rect(L, T, R0 - L, B - T, { stroke: PC.line, w: 0.6 });
+    P.text((L + R0) / 2, B + 23, o.xl, { size: 8, color: PC.muted, align: 'center' });
+    P.text(x, T - 6, o.yl, { size: 8, color: PC.muted });
+    (o.bands || []).forEach(function (b) { P.poly(b.lo.concat(b.hi.slice().reverse()).map(function (p) { return [sx(p[0]), sy(p[1])]; }), { fill: tint(b.color, 0.16) }); });
+    (o.series || []).forEach(function (s) { P.poly(s.pts.map(function (p) { return [sx(p[0]), sy(p[1])]; }), { color: s.color, w: s.w || 1.5, dash: s.dash }); });
+    (o.marks || []).forEach(function (m) { P.dot(sx(m.x), sy(m.y), 3.2, m.color); if (m.label) P.text(sx(m.x) + (m.left ? -6 : 6), sy(m.y) + 3, m.label, { size: 7.5, color: PC.ink, align: m.left ? 'right' : 'left' }); });
+    var lx = L; (o.legend || []).forEach(function (g) { if (g.band) P.rect(lx, y + h + 8, 12, 6, { fill: tint(g.color, 0.25) }); else P.line(lx, y + h + 11, lx + 12, y + h + 11, { color: g.color, w: 2, dash: g.dash }); lx += 16 + P.text(lx + 16, y + h + 13.5, g.label, { size: 7.5, color: PC.muted }) + 10; });
+  }
+
+  function buildPDF(lang) {
+    var id = lang === 'id', T = function (en, ind) { return id ? ind : en; }, J = S.job, P = new PDF(), M = P.M, CW = P.W - 2 * M;
+    var ws = R.warnings || [], bad = ws.filter(function (x) { return x.lvl === 'bad'; }), warn = ws.filter(function (x) { return x.lvl !== 'bad'; });
+    var st = bad.length ? [PC.crit, T('DANGER', 'BAHAYA'), T('A limit is exceeded. Read the list below before starting.', 'Ada batas yang terlampaui. Baca daftar di bawah sebelum mulai.')] : warn.length ? [PC.warn, T('CHECK', 'PERHATIAN'), T('The job can go ahead, but some items need checking.', 'Operasi bisa jalan, tapi ada hal yang perlu dicek.')] : [PC.good, T('SAFE', 'AMAN'), T('No limit is exceeded with the data entered.', 'Tidak ada batas yang terlampaui dengan data yang diisi.')];
+    function k(v) { return ok(v) ? (v / 1000).toFixed(1) : '-'; }
+    function h2(t) { P.need(90); P.y += 10; P.text(M, P.y, t, { size: 12.5, bold: true, color: PC.ink }); P.y += 5; P.line(M, P.y, M + CW, P.y, { color: PC.ink, w: 1 }); P.y += 14; }
+    function note(t) { P.need(24); P.y += P.para(M, P.y, t, CW, { size: 8.5, color: PC.muted }) + 4; }
+    function table(cols, rows, o) {
+      o = o || {}; var fs = o.size || 8.5, lh = fs * 1.3, pad = 4;
+      var tw = cols.reduce(function (a, c) { return a + c.w; }, 0), sc = CW / tw;
+      cols.forEach(function (c) { c.W = c.w * sc; });
+      function head() { var hh = 0, ls = cols.map(function (c) { var l = P.wrap(c.t, c.W - 2 * pad, fs - 0.5, true); hh = Math.max(hh, l.length); return l; }); var H0 = hh * lh + 2 * pad; P.rect(M, P.y, CW, H0, { fill: PC.soft }); var x = M; cols.forEach(function (c, i) { ls[i].forEach(function (l, j) { P.text(c.a === 'r' ? x + c.W - pad : x + pad, P.y + pad + fs + j * lh - 1, l, { size: fs - 0.5, bold: true, color: PC.muted, align: c.a === 'r' ? 'right' : 'left' }); }); x += c.W; }); P.y += H0; }
+      P.need(40); head();
+      rows.forEach(function (r) {
+        var ls = cols.map(function (c, i) { return P.wrap(r[i] == null ? '-' : String(r[i]), c.W - 2 * pad, fs, r.bold); }), n = Math.max.apply(null, ls.map(function (l) { return l.length; })), rh = n * lh + 2 * pad;
+        if (P.y + rh > P.H - M - 16) { P.add(); head(); }
+        var x = M; cols.forEach(function (c, i) { ls[i].forEach(function (l, j) { P.text(c.a === 'r' ? x + c.W - pad : x + pad, P.y + pad + fs + j * lh - 1, l, { size: fs, bold: r.bold, color: (r.colors && r.colors[i]) || PC.ink, align: c.a === 'r' ? 'right' : 'left' }); }); x += c.W; });
+        P.y += rh; P.line(M, P.y, M + CW, P.y, { color: PC.line, w: 0.5 });
+      });
+      P.y += 6;
+    }
+    function bullets(items) { items.forEach(function (it) { var t = it.t, c = it.c || PC.muted, hh = P.wrap(t, CW - 14, 9).length * 12.2; P.need(hh + 4); P.dot(M + 3.5, P.y - 3, 2.6, c); P.y += P.para(M + 12, P.y, t, CW - 14, { size: 9, lh: 12.2 }) + 4; }); }
+
+    /* ---- page 1: summary ---- */
+    P.add();
+    P.rect(0, 0, P.W, 78, { fill: PC.accent });
+    P.text(M, 30, T('TORQUE & DRAG REPORT', 'LAPORAN TORQUE & DRAG'), { size: 9, bold: true, color: [200, 228, 236] });
+    P.text(M, 56, J.well || T('Well', 'Sumur'), { size: 22, bold: true, color: [255, 255, 255] });
+    P.text(M + CW, 30, J.date || today(), { size: 9, color: [255, 255, 255], align: 'right' });
+    P.text(M + CW, 46, [J.client, J.rig].filter(Boolean).join(' · '), { size: 9, color: [220, 236, 241], align: 'right' });
+    P.y = 98;
+    var info = [[T('Job', 'Pekerjaan'), J.job || '-'], [T('String depth', 'Kedalaman string'), n0(R.D) + ' ft MD'], [T('Hole angle at bottom', 'Inklinasi di dasar'), fx(R.bottom.inc, 0) + '°'], [T('TVD at bottom', 'TVD di dasar'), n0(R.bottom.tvd) + ' ft'], [T('Fluid', 'Fluida'), (S.fluid.mwOut || '0') + ' ppg'], [T('Well path', 'Lintasan sumur'), R.trajSource === 'survey' ? T('Survey, ', 'Survey, ') + R.traj.st.length + T(' stations', ' stasiun') : T('Planned profile (no survey)', 'Profil rencana (tanpa survey)')]];
+    var cw3 = CW / 3;
+    info.forEach(function (it, i) { var cx = M + (i % 3) * cw3, cy = P.y + Math.floor(i / 3) * 30; P.text(cx, cy, it[0], { size: 7.5, color: PC.muted }); P.para(cx, cy + 12, it[1], cw3 - 10, { size: 9.5, bold: true, lh: 11 }); });
+    P.y += 64;
+    P.rect(M, P.y, CW, 38, { fill: tint(st[0], 0.1) }); P.rect(M, P.y, 5, 38, { fill: st[0] });
+    P.text(M + 16, P.y + 16, st[1], { size: 13, bold: true, color: st[0] });
+    P.para(M + 16, P.y + 30, st[2], CW - 30, { size: 9.5 });
+    P.y += 50;
+    h2(T('Numbers for the rig', 'Angka untuk di rig'));
+    var tiles = [];
+    tiles.push([T('Pick-up weight', 'Berat angkat (pick-up)'), k(R.hlPU), 'klbs', T('Normal range ', 'Rentang normal ') + k(R.hlPUlo) + '-' + k(R.hlPUhi) + T(' klbs. Much higher means the hole is getting tight.', ' klbs. Jauh di atas ini berarti lubang mulai ketat.')]);
+    tiles.push([T('Slack-off weight', 'Berat turun (slack-off)'), k(R.hlSO), 'klbs', T('Normal range ', 'Rentang normal ') + k(R.hlSOhi) + '-' + k(R.hlSOlo) + T(' klbs. Much lower means the string is being held up.', ' klbs. Jauh di bawah ini berarti string tertahan.')]);
+    tiles.push([T('Rotating weight', 'Berat saat diputar'), k(R.hlROB), 'klbs', T('Weight with no drag. Use it to check the weight indicator.', 'Berat tanpa gesekan. Pakai untuk cek indikator.')]);
+    tiles.push([T('Rotating torque, off bottom', 'Torsi diputar, di atas dasar'), n0(R.tqROB), 'ft-lb', T('Normal torque while rotating off bottom.', 'Torsi normal saat string berputar di atas dasar.')]);
+    if (R.maxPull.hl != null) tiles.push([T('Maximum safe pull', 'Tarikan maksimum aman'), k(R.maxPull.hl), 'klbs', T('Do not pull above this. Limited by ', 'Jangan tarik di atas ini. Dibatasi oleh ') + R.maxPull.limitedBy + '.']);
+    if (R.pullPlan) tiles.push([T('Overpull ', 'Overpull ') + k(R.pullPlan.x) + T(' klbs reaches the fish as', ' klbs sampai di fish sebesar'), k(R.pullPlan.fish), 'klbs', T('Only ', 'Hanya ') + Math.round(R.pullPlan.eff * 100) + T('% of the pull reaches the fish; the rest is lost to friction.', '% tarikan sampai ke fish; sisanya hilang karena gesekan.')]);
+    if (R.downPlan) tiles.push([T('Set-down ', 'Set-down ') + k(R.downPlan.x) + T(' klbs reaches the fish as', ' klbs sampai di fish sebesar'), k(R.downPlan.fish), 'klbs', T('Indicator reading ', 'Bacaan indikator ') + k(R.downPlan.hl) + ' klbs.' + (R.downPlan.st ? T(' The pipe buckles.', ' Pipa buckling.') : '')]);
+    if (R.jar && R.jar.up) tiles.push([T('Jar up: trips at indicator', 'Jar ke atas: trip di indikator'), k(R.jar.up), 'klbs', T('Pull to this reading and hold. Setting ', 'Tarik sampai angka ini lalu tahan. Setting ') + k(R.jar.upSet) + ' klbs.']);
+    if (R.jar && R.jar.down != null) tiles.push([T('Jar down: trips at indicator', 'Jar ke bawah: trip di indikator'), k(R.jar.down), 'klbs', T('Slack off to this reading. Setting ', 'Turunkan sampai angka ini. Setting ') + k(R.jar.downSet) + ' klbs.']);
+    if (R.torque.target) tiles.push([T('Surface torque for ', 'Torsi permukaan untuk ') + n0(R.torque.target) + T(' ft-lb at fish', ' ft-lb di fish'), n0(R.torque.surf), 'ft-lb', T('About ', 'Sekitar ') + fx(R.torque.turns, 1) + T(' turns of wind-up.', ' putaran wind-up.')]);
+    if (R.mill) tiles.push([T('Milling with ', 'Milling dengan ') + k(R.mill.wob) + ' klbs', n0(R.mill.tq), 'ft-lb', T('Indicator ', 'Indikator ') + k(R.mill.hl) + T(' klbs on bottom.', ' klbs di dasar.') + (R.mill.est ? T(' Mill torque is estimated.', ' Torsi mill masih estimasi.') : '')]);
+    var tw = (CW - 16) / 3, rowH = 0;
+    tiles.forEach(function (t, i) {
+      var c = i % 3; if (c === 0) { if (i) P.y += rowH + 8; rowH = 0; var hs = tiles.slice(i, i + 3).map(function (q) { return 30 + P.wrap(q[0], tw - 16, 7.8).length * 9.5 + P.wrap(q[3], tw - 16, 7.8).length * 9.8; }); rowH = Math.max.apply(null, hs) + 8; P.need(rowH); }
+      var x = M + c * (tw + 8), y = P.y; P.rect(x, y, tw, rowH, { stroke: PC.line, fill: [250, 251, 251] });
+      var ly = y + 12; P.wrap(t[0], tw - 16, 7.8).forEach(function (l) { P.text(x + 8, ly, l, { size: 7.8, color: PC.muted }); ly += 9.5; });
+      var vw = P.text(x + 8, ly + 13, t[1], { size: 16, bold: true }); P.text(x + 12 + vw, ly + 13, t[2], { size: 8, color: PC.muted });
+      P.para(x + 8, ly + 27, t[3], tw - 16, { size: 7.8, lh: 9.8, color: PC.muted });
+    });
+    P.y += rowH + 4;
+    var o = S.op, cmp = [];
+    if (num(o.measPU)) cmp.push([T('Pick-up', 'Angkat (pick-up)'), num(o.measPU) * 1000, R.hlPU]);
+    if (num(o.measSO)) cmp.push([T('Slack-off', 'Turun (slack-off)'), num(o.measSO) * 1000, R.hlSO]);
+    if (num(o.measROB)) cmp.push([T('Rotating', 'Diputar'), num(o.measROB) * 1000, R.hlROB]);
+    if (cmp.length) {
+      h2(T('Actual against calculated', 'Aktual dibanding perhitungan'));
+      table([{ t: T('Reading', 'Bacaan'), w: 3 }, { t: T('Actual (klbs)', 'Aktual (klbs)'), w: 2, a: 'r' }, { t: T('Calculated (klbs)', 'Perhitungan (klbs)'), w: 2, a: 'r' }, { t: T('Difference (klbs)', 'Selisih (klbs)'), w: 2, a: 'r' }, { t: T('Result', 'Hasil'), w: 2.4 }],
+        cmp.map(function (r) { var d = r[1] - r[2], a = Math.abs(d) / 1000, s = a <= 3 ? [T('Match', 'Cocok'), PC.good] : a <= 6 ? [T('Close', 'Cukup dekat'), PC.warn] : [T('Far off', 'Beda jauh'), PC.crit]; var row = [r[0], k(r[1]), k(r[2]), (d >= 0 ? '+' : '') + k(d), s[0]]; row.colors = [null, null, null, null, s[1]]; return row; }));
+      note(T('Match means within 3 klbs. If a reading is far off, check the rotating weight first: a difference there points to pipe weight, fluid or block weight, not friction.', 'Cocok berarti selisih paling besar 3 klbs. Kalau beda jauh, cek dulu berat diputar: selisih di sana berarti berat pipa, fluida atau block weight yang salah, bukan gesekan.'));
+    }
+    h2(T('What to check', 'Yang perlu dicek'));
+    if (ws.length) bullets(bad.concat(warn).map(function (x) { return { t: (x.lvl === 'bad' ? T('Danger: ', 'Bahaya: ') : T('Check: ', 'Cek: ')) + (id ? idn(x.msg) : x.msg), c: x.lvl === 'bad' ? PC.crit : PC.warn }; }));
+    else note(T('Nothing to report.', 'Tidak ada catatan.'));
+
+    (function () { var yy = Math.max(P.y + 50, P.H - 100); if (yy > P.H - 60) { P.add(); yy = P.y + 40; }
+      [[J.preparedBy, T('Prepared by', 'Dibuat oleh')], [J.fisherman, 'Fisherman'], [J.companyRep, T('Company representative', 'Company man')]].forEach(function (s2, i) { var x = M + i * (CW / 3); P.line(x, yy, x + CW / 3 - 18, yy, { color: PC.ink, w: 0.6 }); P.text(x, yy - 5, s2[0] || '', { size: 9, bold: true }); P.text(x, yy + 12, s2[1], { size: 8, color: PC.muted }); }); })();
+
+    /* ---- page 2: charts ---- */
+    P.add();
+    h2(T('Weights while running in', 'Berat indikator saat masuk lubang'));
+    note(T('Compare the weight indicator with these lines at each depth. Shaded = normal range from the friction band.', 'Bandingkan bacaan indikator dengan garis ini di setiap kedalaman. Area arsir = rentang normal dari variasi friction factor.'));
+    var b = R.broom, blk = R.block / 1000, sens = num(S.settings.sens);
+    function cl(key) { return [[blk, 0]].concat(b.map(function (r) { return [r[key] / 1000, r.d]; })); }
+    var marks = (S.op.fieldPts || []).filter(function (p) { return p.d <= R.D + 1; }).reduce(function (a, p) { a.push({ x: p.pu + blk, y: p.d, color: PC.s1 }, { x: p.so + blk, y: p.d, color: PC.s2, left: true, label: (p.lab ? p.lab + ': ' : '') + 'PU ' + p.pu + ' / SO ' + p.so }); return a; }, []);
+    var hasHere = (S.op.fieldPts || []).some(function (p) { return Math.abs(p.d - R.D) < 1; });
+    if (!hasHere) { if (num(o.measPU)) marks.push({ x: num(o.measPU), y: R.D, color: PC.s1 }); if (num(o.measSO)) marks.push({ x: num(o.measSO), y: R.D, color: PC.s2, left: true, label: T('Measured', 'Aktual') }); }
+    pdfChart(P, M, P.y + 10, CW, 330, { xl: T('Hookload (klbs)', 'Berat indikator (klbs)'), yl: T('Depth (ft MD)', 'Kedalaman (ft MD)'), down: true,
+      series: [{ pts: cl('pu'), color: PC.s1 }, { pts: cl('so'), color: PC.s2 }, { pts: cl('rob'), color: PC.s3 }],
+      bands: sens && b[0].puLo != null ? [{ color: PC.s1, lo: cl('puLo'), hi: cl('puHi') }, { color: PC.s2, lo: cl('soHi'), hi: cl('soLo') }] : [], marks: marks,
+      legend: [{ color: PC.s1, label: T('Pick-up', 'Angkat') }, { color: PC.s2, label: T('Slack-off', 'Turun') }, { color: PC.s3, label: T('Rotating', 'Diputar') }].concat(sens ? [{ color: PC.s1, band: true, label: T('Friction ±', 'Friction ±') + sens }] : []).concat(marks.length ? [{ color: PC.ink, label: T('Dots = measured', 'Titik = aktual') }] : []) });
+    P.y += 378;
+    var pt = R.pullTrans, hasJar = pt[0].jar != null, mx = pt[pt.length - 1].x / 1000;
+    h2(T('How much pull reaches the fish', 'Berapa tarikan yang sampai ke fish'));
+    note(T('String latched to the fish, pulling above pick-up weight. The gap to the dashed line is lost to wall friction.', 'String sudah menangkap fish dan ditarik di atas berat pick-up. Selisih dengan garis putus-putus hilang karena gesekan dinding.'));
+    pdfChart(P, M, P.y + 10, CW, 210, { xl: T('Overpull at surface (klbs)', 'Overpull di permukaan (klbs)'), yl: T('Tension downhole (klbs)', 'Tension di bawah (klbs)'), x0: true, y0: true,
+      series: [{ pts: pt.map(function (r) { return [r.x / 1000, r.fish / 1000]; }), color: PC.s1 }].concat(hasJar ? [{ pts: pt.map(function (r) { return [r.x / 1000, r.jar / 1000]; }), color: PC.s2 }] : []).concat([{ pts: [[0, 0], [mx, mx]], color: PC.grey, dash: [4, 3], w: 1 }]),
+      marks: R.pullPlan ? [{ x: R.pullPlan.x / 1000, y: R.pullPlan.fish / 1000, color: PC.s1, label: T('Plan: ', 'Rencana: ') + k(R.pullPlan.fish) + T(' klbs at fish', ' klbs di fish') }] : [],
+      legend: [{ color: PC.s1, label: T('At fish', 'Di fish') }].concat(hasJar ? [{ color: PC.s2, label: T('At jar', 'Di jar') }] : []).concat([{ color: PC.grey, dash: [4, 3], label: T('No friction loss', 'Tanpa gesekan') }]) });
+    P.y += 258;
+
+    /* ---- page 3: details ---- */
+    P.add();
+    h2(T('Well and string', 'Data sumur dan rangkaian'));
+    table([{ t: T('Section', 'Section'), w: 4 }, { t: T('Top (ft)', 'Top (ft)'), w: 1.5, a: 'r' }, { t: T('Bottom (ft)', 'Bottom (ft)'), w: 1.5, a: 'r' }, { t: 'ID (in)', w: 1.3, a: 'r' }, { t: T('Friction pick-up', 'FF angkat'), w: 1.5, a: 'r' }, { t: T('Friction slack-off', 'FF turun'), w: 1.5, a: 'r' }],
+      R.secs.map(function (s) { return [s.name, n0(s.top), n0(s.bottom), fx(s.id, 3), fx(s.mu, 2), fx(s.muSO || s.mu, 2)]; }));
+    table([{ t: '#', w: 0.5, a: 'r' }, { t: T('Item (bottom up)', 'Item (dari bawah)'), w: 4 }, { t: 'OD (in)', w: 1.2, a: 'r' }, { t: 'ID (in)', w: 1.2, a: 'r' }, { t: T('Length (ft)', 'Panjang (ft)'), w: 1.4, a: 'r' }, { t: T('Top (ft)', 'Top (ft)'), w: 1.3, a: 'r' }, { t: T('Weight (lb/ft)', 'Berat (lb/ft)'), w: 1.4, a: 'r' }, { t: T('Safe pull (klbs)', 'Tarik aman (klbs)'), w: 1.6, a: 'r' }],
+      R.spans.map(function (s) { var p = R.props[s.i], c = R.comps[s.i]; return [s.i + 1, c.name, fx(p.od, 3), fx(p.id, 3), fx(s.bot - s.top, 0), n0(s.top), fx(p.wt, 1), p.rated ? k(p.tens / (num(S.settings.dfTension) || 1.1)) : T('not entered', 'belum diisi')]; }));
+    if (R.jar) {
+      h2(T('Jar', 'Jar'));
+      var jr = [[T('String above jar, picking up', 'String di atas jar, diangkat'), k(R.jar.puAbove)], [T('String above jar, slacking off', 'String di atas jar, diturunkan'), k(R.jar.soAbove)]];
+      if (R.jar.up) { var r1 = [T('Up-jar trips at ', 'Jar ke atas trip di setting ') + k(R.jar.upSet) + T(' klbs setting', ' klbs'), k(R.jar.up)]; r1.bold = true; jr.push(r1); }
+      if (R.jar.down != null) { var r2 = [T('Down-jar trips at ', 'Jar ke bawah trip di setting ') + k(R.jar.downSet) + T(' klbs setting', ' klbs'), k(R.jar.down)]; r2.bold = true; jr.push(r2); }
+      table([{ t: R.jar.name + T(', top at ', ', top di ') + n0(R.jar.top) + ' ft', w: 6 }, { t: T('Indicator (klbs)', 'Indikator (klbs)'), w: 2, a: 'r' }], jr);
+    }
+    h2(T('Torque', 'Torsi'));
+    var tq = [[T('Torque lost to wall friction, surface to fish', 'Torsi hilang karena gesekan, permukaan ke fish'), n0(R.torque.loss) + ' ft-lb']];
+    if (R.torque.maxSurf != null) tq.push([T('Maximum allowable surface torque (', 'Torsi permukaan maksimum aman (') + R.torque.limitedBy + ')', n0(R.torque.maxSurf) + ' ft-lb'], [T('Largest torque that can reach the fish', 'Torsi terbesar yang bisa sampai ke fish'), n0(R.torque.maxAtFish) + ' ft-lb']);
+    if (R.comb) tq.push([T('Picking up at ', 'Angkat ') + n0(R.comb.va) + T(' ft/min while rotating ', ' ft/menit sambil diputar ') + n0(R.comb.rpm) + ' rpm', k(R.comb.hlPU) + ' klbs, ' + n0(R.comb.tqPU) + ' ft-lb']);
+    table([{ t: T('Item', 'Item'), w: 6 }, { t: T('Value', 'Nilai'), w: 2.4, a: 'r' }], tq);
+    if (R.mill) {
+      h2(T('Milling or washover', 'Milling atau washover'));
+      var M2 = R.mill, mr = [[T('Weight on the tool', 'Berat di mill/shoe'), k(M2.wob) + ' klbs'], [T('Torque at the tool', 'Torsi di mill/shoe') + (M2.est ? T(' (estimated)', ' (estimasi)') : ''), n0(M2.tob) + ' ft-lb'], [T('Indicator on bottom', 'Indikator di dasar'), k(M2.hl) + ' klbs'], [T('Surface torque on bottom', 'Torsi permukaan di dasar'), n0(M2.tq) + ' ft-lb'], [T('Torque margin to the limit', 'Sisa torsi sampai batas'), M2.tqMargin == null ? '-' : n0(M2.tqMargin) + ' ft-lb'], [T('Weight at which buckling starts', 'Berat saat pipa mulai buckling'), k(M2.wobSin) + ' klbs']];
+      if (M2.neutral) mr.push([T('Neutral point', 'Titik netral'), n0(M2.neutral.depth) + ' ft (' + M2.neutral.name + ')']);
+      table([{ t: T('Item', 'Item'), w: 6 }, { t: T('Value', 'Nilai'), w: 2.4, a: 'r' }], mr);
+      if (R.wash && !R.wash.none) { var F = R.wash; table([{ t: T('Washover fit', 'Kecocokan washover'), w: 6 }, { t: T('Value', 'Nilai'), w: 2.4, a: 'r' }], [[T('Clearance over the fish (diameter)', 'Celah ke fish (diameter)'), F.fishOD ? fx(F.idClear, 3) + ' in' : '-'], [T('Clearance to the hole (diameter)', 'Celah ke lubang (diameter)'), fx(F.odClear, 3) + ' in'], [T('Washover pipe length', 'Panjang washpipe'), fx(F.wpLen, 0) + ' ft']]); }
+    }
+    h2(T('BHA checks', 'Pengecekan BHA'));
+    table([{ t: T('Item', 'Item'), w: 3.2 }, { t: T('Depth (ft)', 'Kedalaman (ft)'), w: 2, a: 'r' }, { t: T('Max dogleg (deg/100 ft)', 'Dogleg maks (deg/100 ft)'), w: 1.7, a: 'r' }, { t: T('Bending stress (psi)', 'Tegangan bending (psi)'), w: 1.7, a: 'r' }, { t: T('Status', 'Status'), w: 2.8 }],
+      R.bha.map(function (r) { var row = [r.name, n0(r.top) + '-' + n0(r.bot), fx(r.maxDls, 1), n0(r.bend), r.flag === 'ok' ? 'OK' : (id ? idn(r.note) : r.note)]; row.colors = [null, null, null, null, r.flag === 'ok' ? PC.good : r.flag === 'bad' ? PC.crit : PC.warn]; return row; }));
+    h2(T('How this was calculated', 'Dasar perhitungan'));
+    bullets([
+      { t: T('Soft-string torque and drag model (Johancsik, SPE 11380) in 3D, with the BHA solved as a stiff beam where it applies. Well path by minimum curvature.', 'Model soft-string torque & drag (Johancsik, SPE 11380) dalam 3D; BHA dihitung sebagai beam kaku bila ada. Lintasan sumur dengan metode minimum curvature.') },
+      { t: T('Friction factors as listed per section; shaded ranges show ±', 'Friction factor sesuai tabel per section; area arsir menunjukkan ±') + sens + '.' },
+      { t: T('Indicator readings include block weight of ', 'Bacaan indikator sudah termasuk block weight ') + (S.rig.block || '0') + T(' klbs and no sheave friction.', ' klbs, tanpa koreksi sheave friction.') },
+      { t: T('Pipe limits from API RP 7G with the entered yield; tool limits only where a rating was entered.', 'Batas pipa dari API RP 7G dengan yield yang diisi; batas alat hanya bila rating diisi.') },
+      { t: T('These are estimates. Use them with field judgement and update friction factors from actual weights.', 'Angka ini perkiraan. Pakai bersama pengalaman lapangan, dan perbarui friction factor dari berat aktual.') }
+    ]);
+
+    var N = P.pageCount();
+    for (var i = 0; i < N; i++) { P.onPage(i); P.line(M, P.H - 30, M + CW, P.H - 30, { color: PC.line, w: 0.5 }); P.text(M, P.H - 18, (J.well || '') + ' · ' + T('Fishing Torque & Drag', 'Fishing Torque & Drag') + ' · ' + (J.date || today()), { size: 7.5, color: PC.muted }); P.text(M + CW, P.H - 18, T('Page ', 'Halaman ') + (i + 1) + T(' of ', ' dari ') + N, { size: 7.5, color: PC.muted, align: 'right' }); }
+    return P.bytes();
+  }
+  function reportHTML(w) {
+    var J = S.job, C = charts('p-', Math.min(w, 620)), sens = num(S.settings.sens);
+    function m(l, v) { return '<div><span>' + esc(l) + '</span><b>' + esc(v || '–') + '</b></div>'; }
+    var h = '<article class="rp" id="report"><div class="rhead"><div><small>Fishing services</small><h1>Torque and Drag Analysis</h1></div><div><small>Date</small><b>' + esc(J.date || today()) + '</b></div></div>';
+    h += '<div class="meta">' + m('Well', J.well) + m('Field', J.field) + m('Rig', J.rig) + m('Client', J.client) + m('Job', J.job) + m('Fish', S.op.fish) + m('Stuck mechanism', S.op.stuck) + m('Prepared by', J.preparedBy) + '</div>';
+    h += '<h2>1. Rig summary at ' + n0(R.D) + ' ft MD</h2>' + summary() + '<h3>Checks</h3>' + alerts();
+    if (J.notes) h += '<h3>Notes</h3><p style="font-size:13.5px;margin:4px 0">' + esc(J.notes) + '</p>';
+    h += '<h3>Jar trip readings</h3>' + blkJar() + '<h3>Torque and wind-up</h3>' + blkTorque() + blkExtra();
+    h += '<h2 class="pb">2. Well and string data</h2><p class="note">' + esc(trajLine()) + '</p>' + C.path;
+    h += '<h3>Wellbore, fluid and rig</h3><div class="scroll"><table><thead><tr><th>Section</th><th class="n">Top (ft MD)</th><th class="n">Bottom (ft MD)</th><th class="n">ID (in)</th><th class="n">Friction factor</th></tr></thead><tbody>' + R.secs.map(function (s) { return '<tr><td>' + esc(s.name) + '</td><td class="n">' + n0(s.top) + '</td><td class="n">' + n0(s.bottom) + '</td><td class="n">' + fx(s.id, 3) + '</td><td class="n">' + fx(s.mu, 2) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+    h += '<p class="note">Fluid ' + esc(S.fluid.mwOut || '0') + ' ppg in the annulus' + (S.fluid.mwIn ? ', ' + esc(S.fluid.mwIn) + ' ppg inside the string' : '') + '. Block weight ' + esc(S.rig.block || '0') + ' klbs. Hoisting limit ' + esc(S.rig.maxHook || 'not entered') + ' klbs. Torque limit ' + esc(S.rig.maxTorque || 'not entered') + ' ft-lb.</p>';
+    h += '<h3>String, bottom up</h3>' + tblString();
+    h += '<h2 class="pb">3. Running in: expected weights</h2>' + C.broom + tblWeights() + C.tension + C.side + C.torque;
+    h += '<h2 class="pb">4. Working the fish</h2>' + C.pull + tblPull() + C.down + tblDown();
+    var sec = 5;
+    if (R.mill || (R.wash && !R.wash.none)) { h += '<h2 class="pb">' + sec + '. Milling and washover</h2>' + (C.millHL ? C.millHL + C.millTQ : '') + blkMill() + (R.wash ? '<h3>Washover fit</h3>' + blkWash() : ''); sec++; }
+    h += '<h2>' + sec + '. BHA stiffness and weight placement</h2>' + tblBha(); sec++;
+    h += '<h2>' + sec + '. Basis and limits of this calculation</h2><ul>' +
+      '<li>Soft-string torque and drag model (Johancsik, Friesen and Dawson, SPE 11380) solved in three dimensions on elements of ' + esc(S.settings.elLen || '30') + ' ft or shorter. Well path by minimum curvature.</li>' +
+      '<li>Friction factors as listed per section.' + (sens ? ' Ranges show the effect of ±' + sens + ' on every friction factor.' : '') + ' Confirm them against pick-up, slack-off and rotating weights taken before latching.</li>' +
+      '<li>Buoyed weights from the fluid densities above. Loads are effective tension. Indicator readings include block weight and are not corrected for sheave friction.</li>' +
+      '<li>Pipe limits from API RP 7G tube formulas with the entered yield and class, capped by any entered rating. Design factors: tension ' + esc(S.settings.dfTension || '1.10') + ', torsion ' + esc(S.settings.dfTorsion || '1.00') + '. Connection and tool limits apply only where a rating was entered.</li>' +
+      '<li>Buckling onset by Dawson and Paslay (Lubinski in near-vertical hole); helical coefficient ' + esc(S.settings.lambda || '2.83') + '. Treat buckling results as warnings.</li>' +
+      (R.stiff && R.stiff.on ? '<li>BHA stiffness: the BHA and 150 ft of pipe above it are solved as an elastic beam inside the hole with wall contact at the entered clearances; side forces from that solution replace the soft-string values there. Tool joints, stabiliser blades and hole enlargement are not represented.</li>' : '<li>BHA stiffness is not included in the forces.</li>') +
+      (R.mill ? '<li>Milling: string rotating on bottom, so wall friction acts as torque only. ' + (R.mill.est ? 'Torque at the tool is estimated as coefficient × weight × effective radius of the cutting face (uniform contact pressure); it is an estimate until checked against a measured torque.' : 'Torque at the tool is the entered value.') + '</li>' : '') +
+      '<li>Not modelled: fluid flow and pressure effects other than the entered pump-open force, jarring dynamics, hole condition (cuttings, key seats, differential sticking). The overpull that reaches the fish is the minimum case, with wall friction fully acting.</li>' +
+      (R.trajSource !== 'survey' ? '<li><b>No survey was used.</b> A planned profile understates doglegs, so real drag and torque are likely higher than shown.</li>' : '') + '</ul>';
+    h += '<div class="sign"><div><b>' + esc(J.preparedBy) + '</b>Prepared by</div><div><b>' + esc(J.fisherman) + '</b>Fisherman</div><div><b>' + esc(J.companyRep) + '</b>Company representative</div></div></article>';
+    return h;
+  }
+
+  /* ---------- calculation ---------- */
+  function calc() {
+    var c = JSON.parse(JSON.stringify(S)); c.traj.survey = parseSurvey(S.traj.surveyText);
+    try { R = TD.run(c); } catch (e) { R = { error: 'Calculation failed: ' + e.message, warnings: [] }; }
+    renderDynamic(); autosave();
+  }
+  function schedule() { clearTimeout(timer); timer = setTimeout(calc, 450); }
+
+  /* ---------- files ---------- */
+  function fileName(ext) { return ('TD_' + (S.job.well || 'case') + '_' + (S.job.date || today())).replace(/[^\w.-]+/g, '_') + '.' + ext; }
+  function saveFile(name, text, mime) {
+    var use = window.claude && typeof window.claude.use === 'function' ? window.claude.use('downloads') : Promise.resolve(null);
+    Promise.race([use, new Promise(function (r) { setTimeout(function () { r(null); }, 4000); })]).then(function (dl) {
+      if (dl) return dl.save({ filename: name, data: text }).then(function () { toast('Saved ' + name); }, function (e) { toast(e && e.code === 'declined' ? 'Save cancelled.' : 'Could not save the file here.'); });
+      try { var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); toast('Saved ' + name); } catch (e) { toast('Could not save the file here.'); }
+    }, function () { toast('Could not save the file here.'); });
+  }
+  function reportFile(simple) {
+    var css = $('#css-tokens').textContent + $('#css-report').textContent + 'body{background:#fff;padding:0 0 30px}.rp{border:0}';
+    return '<!DOCTYPE html><html lang="' + (simple ? 'id' : 'en') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>' + esc((simple ? 'Ringkasan T&D ' : 'Torque and Drag Analysis ') + (S.job.well || '')) + '</title><style>' + css + '</style></head><body>' + (simple ? simpleHTML(700) : reportHTML(700)) + '</body></html>';
+  }
+  function readFile(input, cb) { var f = input.files && input.files[0]; if (!f) return; var r = new FileReader(); r.onload = function () { cb(String(r.result)); input.value = ''; }; r.readAsText(f); }
+
+  /* ---------- events ---------- */
+  function showTab(t) {
+    if (!TABS.some(function (x) { return x[0] === t; })) t = 'results';
+    curTab = t;
+    TABS.forEach(function (x) { $('#p-' + x[0]).classList.toggle('on', x[0] === t); });
+    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === t)); });
+  }
+  function act(a, el) {
+    var p = a.split(':'), i = parseInt(p[1], 10);
+    switch (p[0]) {
+      case 'mode': S.traj.mode = p[1]; renderInputs(); calc(); break;
+      case 'add-sec': S.secs.push({ name: '', cased: 'cased', top: S.secs.length ? S.secs[S.secs.length - 1].bottom : '0', bottom: '', id: '', mu: '0.25', muSO: '' }); renderInputs(); calc(); break;
+      case 'del-sec': S.secs.splice(i, 1); renderInputs(); calc(); break;
+      case 'add-comp': S.comps.splice(Math.max(0, S.comps.length - 1), 0, comp({ name: '', type: 'tool' })); renderInputs(); calc(); break;
+      case 'del-comp': S.comps.splice(i, 1); renderInputs(); calc(); break;
+      case 'up-comp': if (i > 0) { S.comps.splice(i - 1, 0, S.comps.splice(i, 1)[0]); renderInputs(); calc(); } break;
+      case 'down-comp': if (i < S.comps.length - 1) { S.comps.splice(i + 1, 0, S.comps.splice(i, 1)[0]); renderInputs(); calc(); } break;
+      case 'new-blank': loadCase(baseCase()); showTab('job'); toast('Blank case started.'); break;
+      case 'save-case': saveFile(fileName('json'), JSON.stringify(S, null, 1), 'application/json'); break;
+      case 'load-case': $('#file-case').click(); break;
+      case 'survey-file': $('#file-survey').click(); break;
+      case 'dl-report': saveFile(fileName('html'), reportFile(), 'text/html'); break;
+      case 'pdf': try { saveFile(fileName('pdf'), buildPDF(S.settings.lang || 'en'), 'application/pdf'); } catch (e) { toast('Could not make the PDF: ' + e.message); } break;
+      case 'dl-simple': saveFile(fileName('html').replace('TD_', 'TD_ringkas_'), reportFile(true), 'text/html'); break;
+      case 'print-simple': showTab('simple'); document.body.classList.add('ps'); try { window.print(); } catch (e) { toast('Print tidak tersedia di sini. Download report-nya.'); } document.body.classList.remove('ps'); break;
+      case 'print': showTab('report'); try { window.print(); } catch (e) { toast('Printing is not available here. Download the report instead.'); } break;
+      case 'apply-cal-pu': var k = parseFloat(p[1]); if (k > 0) { S.secs.forEach(function (s) { var so = num(s.muSO); if (!so) s.muSO = ''; s.mu = (num(s.mu) * k).toFixed(3); if (!so) s.muSO = ''; }); renderInputs(); calc(); toast('Pick-up friction factors updated.'); } break;
+      case 'apply-cal-so': var k2 = parseFloat(p[1]); if (k2 > 0) { S.secs.forEach(function (s) { s.muSO = ((num(s.muSO) || num(s.mu)) * k2).toFixed(3); }); renderInputs(); calc(); toast('Slack-off friction factors updated.'); } break;
+    }
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-tab]'); if (t) { showTab(t.getAttribute('data-tab')); try { location.hash = t.getAttribute('data-tab'); } catch (e) { /* ignore */ } return; }
+    var a = ev.target.closest('[data-act]'); if (a) act(a.getAttribute('data-act'), a);
+  });
+  function onInput(ev) {
+    var el = ev.target, k = el.getAttribute && el.getAttribute('data-k');
+    if (el.id === 'cat-comp' && el.value) { var q = el.value.split(':'); S.comps.splice(Math.max(0, S.comps.length - 1), 0, comp(CAT[+q[0]][1][+q[1]])); renderInputs(); calc(); return; }
+    if (el.id === 'cat-sec' && el.value) { var c = CATSEC[+el.value], lastB = S.secs.length ? S.secs[S.secs.length - 1].bottom : '0'; S.secs.push({ name: c.name, cased: c.cased, top: lastB || '0', bottom: '', id: String(c.id), mu: String(c.mu), muSO: '' }); renderInputs(); calc(); return; }
+    if (!k) return;
+    set(S, k, el.value); if (S.example && k.indexOf('job.') !== 0) { /* keep the banner until a blank case is started */ }
+    if (el.getAttribute('data-re')) { renderInputs(); calc(); } else schedule();
+  }
+  document.addEventListener('input', function (ev) { if (ev.target.tagName !== 'SELECT') onInput(ev); });
+  document.addEventListener('change', function (ev) { if (ev.target.tagName === 'SELECT') onInput(ev); });
+  document.addEventListener('pointermove', onHover); document.addEventListener('pointerdown', onHover);
+  document.addEventListener('scroll', hideTip, true);
+  $('#file-case').addEventListener('change', function () { readFile(this, function (txt) { try { loadCase(JSON.parse(txt)); toast('Case loaded.'); } catch (e) { toast('That file is not a saved case.'); } }); });
+  $('#file-survey').addEventListener('change', function () { readFile(this, function (txt) { var n = parseSurvey(txt).length; if (!n) { toast('No survey stations found in that file.'); return; } S.traj.surveyText = txt; S.traj.mode = 'survey'; renderInputs(); calc(); toast(n + ' stations imported.'); }); });
+  window.addEventListener('hashchange', function () { showTab((location.hash || '').replace('#', '')); });
+  var rz; window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(renderDynamic, 250); });
+  window.addEventListener('beforeprint', function () { var r = $('#report'); if (r && !R.error) r.outerHTML = reportHTML(700); var q = $('#simple-report'); if (q && !R.error) q.outerHTML = simpleHTML(700); });
+  window.addEventListener('afterprint', function () { renderDynamic(); });
+
+  /* ---------- start ---------- */
+  if (Object.keys(BUILTIN).length) $('.top .case').insertAdjacentHTML('afterend', '<select id="builtin" aria-label="Open an example case" style="max-width:260px;font-size:13px"><option value="">Open example: ESTA-6…</option>' + Object.keys(BUILTIN).map(function (k) { return '<option value="' + k + '">' + esc(BUILTIN[k].label) + '</option>'; }).join('') + '</select>');
+  if ($('#builtin')) $('#builtin').addEventListener('change', function () { var k = this.value; if (!k) return; loadCase(JSON.parse(JSON.stringify(BUILTIN[k].case))); showTab('results'); toast(BUILTIN[k].label + ' opened.'); this.value = ''; });
+  $('#tabs').innerHTML = TABS.map(function (t, i) { return '<button role="tab" data-tab="' + t[0] + '" id="tab-' + t[0] + '"><b>' + (i + 1) + '</b>' + esc(t[1]) + '</button>'; }).join('');
+  var saved = null; try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { saved = null; }
+  S = merge(baseCase(), saved && saved.v === 1 && !saved.example ? saved : (BUILTIN.overshot_4235 ? JSON.parse(JSON.stringify(BUILTIN.overshot_4235.case)) : exampleCase())); S.comps = (S.comps || []).map(comp);
+  renderInputs(); showTab((location.hash || '').replace('#', '') || 'results'); calc();
+})();
+</script>
+</body>
+</html>

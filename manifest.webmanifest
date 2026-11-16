@@ -1,0 +1,16 @@
+{
+  "name": "Fishing Torque & Drag",
+  "short_name": "Fishing T&D",
+  "description": "Torque and drag for fishing and well intervention: weights, overpull to the fish, jar readings, milling and a PDF report.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#eef1f3",
+  "theme_color": "#0b6177",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
