@@ -1,0 +1,63 @@
+{
+  "name": "fishing-torque-drag",
+  "productName": "Fishing Torque & Drag",
+  "version": "1.0.0",
+  "description": "Torque and drag software for fishing jobs",
+  "author": "Fishing T&D",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "vendor": "node scripts/vendor.js",
+    "dist:win": "npm run vendor && electron-builder --win nsis portable zip --x64",
+    "dist:linux": "npm run vendor && electron-builder --linux AppImage --x64",
+    "dist:win-zip": "npm run vendor && electron-builder --win zip --x64"
+  },
+  "devDependencies": {
+    "electron": "33.4.11",
+    "electron-builder": "25.1.8",
+    "resedit": "2.0.3",
+    "three": "0.170.0"
+  },
+  "build": {
+    "appId": "com.fishingtd.desktop",
+    "productName": "Fishing Torque & Drag",
+    "artifactName": "FishingTorqueDrag-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**",
+      "build/icon.png",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "afterPack": "scripts/afterPack.js",
+    "win": {
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Fishing Torque & Drag",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "artifactName": "FishingTorqueDrag-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "FishingTorqueDrag-Portable-${version}.${ext}"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "category": "Science"
+    }
+  }
+}
